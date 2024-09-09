@@ -1,0 +1,34 @@
+public:
+  community: public
+
+community:
+  community: '{path[1]}'
+
+parametrised_example:
+  community: 'public-{path[1]}'
+
+v3_example:
+  user: snmp-v3-user
+  auth: auth-password
+  auth_alg: HMAC96_SHA
+  priv: priv-password
+  priv_alg: CFB128_AES
+
+# algorithms are defined in pysnmp/entity/config.py:
+# auth:
+#   NONE
+#   HMAC96_MD5
+#   HMAC96_SHA
+#   HMAC128_SHA224
+#   HMAC192_SHA256
+#   HMAC256_SHA384
+#   HMAC384_SHA512
+# priv:
+#   NONE
+#   CBC56_DES
+#   CBC168_3DES
+#   CFB128_AES
+#   CFB192_AES_BLUMENTHAL # semi-standard but not widely used
+#   CFB256_AES_BLUMENTHAL # semi-standard but not widely used
+#   CFB192_AES # non-standard but used by many vendors
+#   CFB256_AES # non-standard but used by many vendors

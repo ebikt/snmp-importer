@@ -1,0 +1,162 @@
+sysinfo_short:
+  tables:
+    snmp_sysinfo:
+      labels:
+        name: system.name
+      metrics:
+        - expr: system.uptime
+          suffix: ''
+          influx: uptime
+          type: gauge
+          help: System uptime
+      scalar: yes
+
+ifaces64:
+  tables:
+    snmp_interfaces:
+      metrics:
+        # Metrics must have numeric value
+        # loop - generate entry for each combination of values of loop variables
+        #        mapping of loop variables, each has its values listed in sequence
+        # expr - expression to compute metric, if it is single variable, then it is added to scrape list
+        # suffix - prometheus metric will be named ${table_name}_${suffix}, loop variables will be added as labels
+        #        - if suffix is empty then it will be used as value for index metric
+        # influx - name of influxb value on influxdb row, mandatory if loop is used, else defaults to value of suffix
+        #        - if influx is empty or none, then this metric wont go into influxdb
+        # type - prometheus metric type
+        # help - prometheus metric help
+        - loop:
+            dir: [in, out]
+          expr: 'ifaces.${dir}_bytes'
+          suffix: bytes
+          influx: '${dir}_bytes'
+          type: counter
+          help: Traffic on interface in bytes
+
+        - loop:
+            dir: [in, out]
+            type: [unicast, multicast, broadcast]
+          expr: 'ifaces.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: packets
+          type: counter
+          help: Traffic on interface in number of packets
+
+        - loop:
+            dir: [in, out]
+            type: [discards, errors]
+          expr: 'ifaces.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: errors
+          type: counter
+          help: Errors on interface
+
+        - expr: 'ifaces.admin_status * 10 + ifaces.oper_status'
+          suffix: ''
+          type: gauge
+          help: inteface status
+
+        - expr: ifaces.high_speed
+          suffix: speed
+          type: gauge
+          help: Interface speed (megabytes)
+
+      labels:
+        # label name to label expression
+        # these are treated as dimensions for prometheus
+        # and as string metrics for influxdb
+        admin_status: ifaces.admin_status
+        oper_status: ifaces.oper_status
+
+      dimensions:
+        # label name to label expression
+        # these are treated as labels (dimensions) both in prometheus and influxdb
+        mac: ifaces.mac
+        name: ifaces.name
+        alias: ifaces.alias
+        descr: ifaces.description
+        iftype: ifaces.type
+
+      # list of additional inputs to scrape
+      # this is needed for expressions that do not consist of just single input variable
+      scrape: []
+
+extreme_ifaces_txr:
+  include:
+    - ifaces64
+  merge_tables:
+    snmp_interfaces:
+      transform: |
+        import re
+        slotre = re.compile(r'[ /][^ /]*$')
+        class Transform:
+          def __init__(self, inputs):
+            self.slot = slotre.sub('', str(inputs.ifaces.description))
+            for outp, inp, splitter, valtype, default in [
+              ('temp', 'temperature',  ' C ', int, 0),
+              ('rx_power', 'rx_power_dBm', ' dBm ', float, -40.0),
+              ('tx_power', 'tx_power_dBm', ' dBm ', float, -40.0),
+              ('bias', 'tx_bias_mA', ' mAmps ', float, 0.0),
+            ]:
+              if inputs.brocadeOptical[inp] is None:
+                setattr(self, outp, None)
+                setattr(self, outp + '_status', None)
+                continue
+              vals = str(inputs.brocadeOptical[inp]).split(splitter, 1)
+              if len(vals) == 2:
+                setattr(self, outp, valtype(vals[0]))
+                setattr(self, outp + '_status', vals[1])
+              else:
+                setattr(self, outp, default)
+                setattr(self, outp + '_status', vals[0])
+      dimensions:
+        slot: transform.slot
+      scrape:
+        - brocadeOptical.temperature
+        - brocadeOptical.tx_power_dBm
+        - brocadeOptical.rx_power_dBm
+        - brocadeOptical.tx_bias_mA
+      metrics:
+        - loop:
+            dir: [tx, rx]
+          expr: transform.${dir}_power
+          influx: txr_${dir}_power
+          suffix: txr_power
+          type: gauge
+          help: Transmit/receive power in dBm
+          tags:
+            tag: >-
+              None     if transform.${dir}_power is None else
+              "40"     if transform.${dir}_power < -30 else
+              "10"     if transform.${dir}_power < -10 else
+              "high"   if transform.${dir}_power <  -5 else
+              "normal"
+            status:   transform.${dir}_power_status
+        - expr: transform.temp
+          suffix: txr_temperature
+          type: gauge
+          help: temperature in Celsius
+          tags:
+            status: transform.temp_status
+        - expr: transform.bias
+          suffix: txr_bias
+          type: gauge
+          help: TX bias in 1uA
+          tags:
+            tag: >-
+              None     if transform.bias is None else
+              "zero"   if transform.bias < 0.01 else
+              "high"   if transform.bias > 11.0 else
+              "normal"
+            status: transform.bias_status
+
+# table collections
+basic:
+  include:
+    - sysinfo_short
+    - ifaces64
+
+vdx:
+  include:
+    - sysinfo_short
+    - extreme_ifaces_txr

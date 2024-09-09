@@ -1,0 +1,568 @@
+alias:
+  lldp:        1.0.8802.1.1.2.1
+  mib2:        1.3.6.1.2.1
+  enterprises: 1.3.6.1.4.1
+  system:      mib2.1
+  if:          mib2.2.2.1
+  ifx:         mib2.31.1.1.1
+  physical:    mib2.47.1.1.1.1
+  logical:     mib2.47.1.2.1.1
+  sensors:     mib2.99.1.1.1
+
+  lldpLocal:   lldp.3
+  lldpRemTab:  lldp.4.1.1
+
+  # https://mibs.observium.org/mib/BROCADE-OPTICAL-MONITORING-MIB/
+  brocade:     enterprises.1588
+  bcsiOptMon:  brocade.3.1.8.1
+  foundryOptMon: enterprises.1991.1.1.3.3.10.1
+
+  # https://mibs.observium.org/mib/FORTINET-FORTIGATE-MIB/
+  fortigate:   enterprises.12356.101
+  fgSystem:    fortigate.4.1
+  fgVdEntry:   fortigate.3.2.1.1
+  fgSensor:    fortigate.4.3.2.1
+  fgCPU:       fortigate.4.4.2.1
+  fgFWPol:     fortigate.5.1.2.1.1
+  fgFWPol6:    fortigate.5.1.2.2.1
+  fgIface:     fortigate.7.2.1.1
+  fgVpn2Tun:   fortigate.12.4.2.1
+  fgVpnSslTun: fortigate.12.2.4.1
+  fgHA:        fortigate.13.2.1.1
+
+  hh3c:        enterprises.25506
+  # https://mibs.observium.org/mib/HH3C-TRANSCEIVER-INFO-MIB/
+  hh3cTxrInfo: hh3c.2.70.1.1.1
+  # https://mibs.observium.org/mib/HH3C-ENTITY-EXT-MIB/
+  hh3cPhys:    hh3c.2.6.1.1.1.1
+  hh3cPhyManu: hh3c.2.6.1.2.1.1
+
+  # https://mibs.observium.org/mib/HH3C-ACL-MIB/
+  hh3cAcl:     hh3c.2.8.2.2
+  hh3cAclBas:  hh3cAcl.2.1
+  hh3cAclAdv:  hh3cAcl.3.1
+
+  # https://mibs.observium.org/mib/HH3C-LSW-DEV-ADM-MIB/
+  hh3cLswSlot: hh3c.8.35.18.4.3.1
+
+  # https://mibs.observium.org/mib/RAPID-CITY/
+  rapidCity:   enterprises.2272
+  rcPort:      rapidCity.1.4.10.1.1
+  rcStatGig:   rapidCity.1.12.2.1
+  tengIf:      rapidCity.1.50.1.3.1
+  tengIfX:     rapidCity.1.50.1.4.1
+  rcPlugOptModEntry: rapidCity.1.71.1.1
+
+input:
+  system:
+    description:       system.1
+    uptime:            system.3
+    contact:           system.4
+    name:              system.5
+    location:          system.6
+    services:          system.7
+
+  ifaces:
+    index:             if.1
+    description:       if.2
+    type:              if.3
+    mtu:               if.3
+    speed:             if.5
+    mac:               if.6 | mac
+    admin_status:      if.7
+    oper_status:       if.8
+    last_change:       if.9
+    in_bytes32:        if.10
+    in_unicast32:      if.11
+    in_non_unicast:    if.12 #deprecated
+    in_discards:       if.13
+    in_errors:         if.14
+    in_unkn_protos:    if.15
+    out_bytes32:       if.16
+    out_unicast32:     if.17
+    out_non_unicast:   if.18 #deprecated
+    out_discards:      if.19
+    out_errors:        if.20
+    out_queue_len:     if.21 #deprecated
+    specific:          if.22 #deprecated
+    name:              ifx.1
+    in_multicast32:    ifx.2
+    in_broadcast32:    ifx.3
+    out_multicast32:   ifx.4
+    out_broadcast32:   ifx.5
+    in_bytes:          ifx.6
+    in_unicast:        ifx.7
+    in_multicast:      ifx.8
+    in_broadcast:      ifx.9
+    out_bytes:         ifx.10
+    out_unicast:       ifx.11
+    out_multicast:     ifx.12
+    out_broadcast:     ifx.13
+    trap_enabled:      ifx.14
+    high_speed:        ifx.15
+    promiscuous:       ifx.16
+    has_connector:     ifx.17
+    alias:             ifx.18
+    discontinuities:   ifx.19
+
+  # Not yet used
+  lldpLocal:
+    chassis_id:        lldpLocal.2 | mac
+    name:              lldpLocal.3
+    description:       lldpLocal.4
+    port_subtype:      lldpLocal.7.1.2
+    port_id:           lldpLocal.7.1.3 | mac
+    port_desc:         lldpLocal.7.1.4
+  lldpRemote:
+    subtype:           lldpRemTab.4
+    chassis_id:        lldpRemTab.5 | mac
+    port_subtype:      lldpRemTab.6
+    port_id:           lldpRemTab.7 | mac
+    port_desc:         lldpRemTab.8
+    name:              lldpRemTab.9
+    description:       lldpRemTab.10
+
+  brocadeOpticalLane:
+    number:            bcsiOptMon.1.1.1
+    temperature:       bcsiOptMon.1.1.2
+    tx_power_status:   bcsiOptMon.1.1.3
+    tx_power_dBm:      bcsiOptMon.1.1.4
+    tx_power_mW:       bcsiOptMon.1.1.5
+    rx_power_status:   bcsiOptMon.1.1.6
+    rx_power_dBm:      bcsiOptMon.1.1.7
+    rx_power_mW:       bcsiOptMon.1.1.8
+    tx_bias_mA:        bcsiOptMon.1.1.9
+
+  brocadeOptical:
+    temperature:       bcsiOptMon.2.1.1 # "35 C Normal"        "Not Supported" 
+    tx_power_status:   bcsiOptMon.2.1.2 # 5                    1
+    tx_power_dBm:      bcsiOptMon.2.1.3 # "-2.128 dBm Normal"  "Not Supported"
+    tx_power_mW:       bcsiOptMon.2.1.4 # 613                  0
+    rx_power_status:   bcsiOptMon.2.1.5 # 5                    1
+    rx_power_dBm:      bcsiOptMon.2.1.6 # -2.317 dBm Normal"   "Not Supported"
+    rx_power_mW:       bcsiOptMon.2.1.7 # 587                  0
+    tx_bias_mA:        bcsiOptMon.2.1.8 # "5.502 mAmps Normal" "Not Supported" 
+
+  foundryOptical:
+    temperature:       foundryOptMon.2 # "35 C Normal"         "NA" 
+    tx_power:          foundryOptMon.3 # "612.6 uWatts Normal" "NA" 
+    rx_power:          foundryOptMon.4 # "586.5 uWatts Normal" "NA"
+    bias_current:      foundryOptMon.5 # "5.502 mAmps Normal"  "NA"
+
+  hh3cOptical:
+    hw_type:           hh3cTxrInfo.1
+    txr_type:          hh3cTxrInfo.2
+    wave_len:          hh3cTxrInfo.3
+    vendor:            hh3cTxrInfo.4
+    serial:            hh3cTxrInfo.5
+    fiber_width:       hh3cTxrInfo.6
+    txr_distance:      hh3cTxrInfo.7
+    has_diag:          hh3cTxrInfo.8
+    tx_power_dBm:      hh3cTxrInfo.9
+    tx_power_max_dBm:  hh3cTxrInfo.10
+    tx_power_min_dBm:  hh3cTxrInfo.11
+    rx_power_dBm:      hh3cTxrInfo.12
+    rx_power_max_dBm:  hh3cTxrInfo.13
+    rx_power_min_dBm:  hh3cTxrInfo.14
+    temperature:       hh3cTxrInfo.15
+    voltage_10mV:      hh3cTxrInfo.16
+    tx_bias_10uA:      hh3cTxrInfo.17
+    # our HP S9500 switches do not provide other info
+
+  physical:
+    description:       physical.2
+    vendor_type:       physical.3
+    contained_in:      physical.4
+    class:             physical.5
+    parent_rel_pos:    physical.6
+    name:              physical.7
+    hw_rev:            physical.8
+    fw_rev:            physical.9
+    sw_rev:            physical.10
+    serial:            physical.11
+    manufacturer:      physical.12
+    model:             physical.13
+    alias:             physical.14
+    asset_id:          physical.15
+    is_fru:            physical.16
+    manufactured:      physical.17 | datetime
+    uris:              physical.18
+    uuid:              physical.19
+
+  sensors:
+    type:              sensors.1
+    scale:             sensors.2
+    precision:         sensors.3
+    value:             sensors.4
+    oper_status:       sensors.5
+    disp_unit:         sensors.6
+    timestamp:         sensors.7
+    updaterate:        sensors.8
+
+  hh3cPhys:
+    admin_status:      hh3cPhys.2
+    oper_status:       hh3cPhys.3
+    standby_status:    hh3cPhys.4
+    alarm_light:       hh3cPhys.5
+    cpu_perc:          hh3cPhys.6
+    cpu_perc_thresh:   hh3cPhys.7
+    mem_perc:          hh3cPhys.8
+    mem_perc_thresh:   hh3cPhys.9
+    mem_size:          hh3cPhys.10
+    uptime:            hh3cPhys.11
+    temperature:       hh3cPhys.12
+    temp_thresh:       hh3cPhys.13
+    voltage:           hh3cPhys.14
+    volt_low:          hh3cPhys.15
+    volt_high:         hh3cPhys.16
+    temp_crit:         hh3cPhys.17
+    mac:               hh3cPhys.18 | mac
+    error_status:      hh3cPhys.19
+    cpu_max:           hh3cPhys.20
+    temp_low:          hh3cPhys.21
+    temp_shut:         hh3cPhys.22
+    mem_size:          hh3cPhys.23
+    cpu_freq:          hh3cPhys.24
+    first_used:        hh3cPhys.25
+    cpu_avg:           hh3cPhys.26
+    mem_avg:           hh3cPhys.27
+    mem_type:          hh3cPhys.28
+    temp_low_crit:     hh3cPhys.29
+    temp_low_shut:     hh3cPhys.30
+    mem_size_rev:      hh3cPhys.32
+    cpu_1min:          hh3cPhys.33
+    cpu_5min:          hh3cPhys.34
+
+    serial:            hh3cPhyManu.2
+    build_info:        hh3cPhyManu.3
+    bom_code:          hh3cPhyManu.4
+    address_count:     hh3cPhyManu.5
+
+  hh3cLswSlot:
+    type:             hh3cLswSlot.2
+    description:      hh3cLswSlot.3
+    cpu_perc:         hh3cLswSlot.4
+    pcb_ver:          hh3cLswSlot.5
+    sw_ver:           hh3cLswSlot.6
+    subslots:         hh3cLswSlot.7
+    admin_status:     hh3cLswSlot.8
+    oper_status:      hh3cLswSlot.9
+    mem_phys:         hh3cLswSlot.10 #clamped, see mem_phys_rev
+    mem:              hh3cLswSlot.11 #clamped, see mem_rev
+    mem_used:         hh3cLswSlot.12 #clamped, see mem_used_rev
+    mem_perc:         hh3cLswSlot.13
+    temperature:      hh3cLswSlot.14
+    run_time:         hh3cLswSlot.19
+    mem_phys_rev:     hh3cLswSlot.20
+    mem_rev:          hh3cLswSlot.21
+    mem_used_rev:     hh3cLswSlot.22
+    model_desc:       hh3cLswSlot.23
+    serial:           hh3cLswSlot.25
+
+  hh3cAclBasic:
+    row_status:        hh3cAclBas.2
+    action:            hh3cAclBas.3
+    src_type:          hh3cAclBas.4
+    src_addr:          hh3cAclBas.5
+    src_prefix:        hh3cAclBas.6
+    src_any:           hh3cAclBas.7
+    src_wild:          hh3cAclBas.8
+    time_range_name:   hh3cAclBas.9
+    fragmented:        hh3cAclBas.10
+    log:               hh3cAclBas.11
+    count:             hh3cAclBas.12 # metric - count
+    enable:            hh3cAclBas.14
+    vpn_instance:      hh3cAclBas.15
+    comment:           hh3cAclBas.16
+    counting:          hh3cAclBas.17
+    routeTypeAny:      hh3cAclBas.18
+    routeTypeValue:    hh3cAclBas.19
+
+  hh3cAclAdvanced:
+    row_status:        hh3cAclAdv.2
+    action:            hh3cAclAdv.3
+    protocol:          hh3cAclAdv.4
+    addr_flag:         hh3cAclAdv.5
+    src_type:          hh3cAclAdv.6
+    src_addr:          hh3cAclAdv.7
+    src_prefix:        hh3cAclAdv.8
+    src_any:           hh3cAclAdv.9
+    src_wild:          hh3cAclAdv.10
+    src_op:            hh3cAclAdv.11
+    src_port1:         hh3cAclAdv.12
+    src_port2:         hh3cAclAdv.13
+    dst_type:          hh3cAclAdv.14
+    dst_addr:          hh3cAclAdv.15
+    dst_prefix:        hh3cAclAdv.16
+    dst_any:           hh3cAclAdv.17
+    dst_wild:          hh3cAclAdv.18
+    dst_op:            hh3cAclAdv.19
+    dst_port1:         hh3cAclAdv.20
+    dst_port2:         hh3cAclAdv.21
+    cmp_type:          hh3cAclAdv.22
+    cmp_code:          hh3cAclAdv.23
+    precedence:        hh3cAclAdv.24
+    tos:               hh3cAclAdv.25
+    dscp:              hh3cAclAdv.26
+    time_range_name:   hh3cAclAdv.27
+    tcp_flag:          hh3cAclAdv.28
+    fragmented:        hh3cAclAdv.29
+    log:               hh3cAclAdv.30
+    count:             hh3cAclAdv.31 # metric - count
+    enable:            hh3cAclAdv.33
+    vpn_instance:      hh3cAclAdv.34
+    comment:           hh3cAclAdv.35
+    reflective:        hh3cAclAdv.36
+    counting:          hh3cAclAdv.37
+    tcp_flag_mask:     hh3cAclAdv.38
+    tcp_flag_value:    hh3cAclAdv.39
+    routeTypeAny:      hh3cAclAdv.40
+    routeTypeValue:    hh3cAclAdv.41
+    flow_label:        hh3cAclAdv.42
+    src_suffix:        hh3cAclAdv.43
+    dst_suffix:        hh3cAclAdv.44
+
+  fortiSystem:
+    version:           fgSystem.1
+    mgmt_vdom:         fgSystem.2
+    cpu_perc:          fgSystem.3
+    mem_perc:          fgSystem.4
+    mem_total:         fgSystem.5
+    disk_perc:         fgSystem.6
+    disk_total:        fgSystem.7
+    sessions:          fgSystem.8
+    lomem_perc:        fgSystem.9
+    lomem_total:       fgSystem.10
+    uptime:            fgSystem.20
+
+
+  fortiVpn:
+    vdom_idx:          fgVpnSslTun.2
+    username:          fgVpnSslTun.3
+    source_ip:         fgVpnSslTun.4 | ip
+    tunnel_ip:         fgVpnSslTun.5 | ip
+    uptime:            fgVpnSslTun.6
+    bytes_in:          fgVpnSslTun.7
+    bytes_out:         fgVpnSslTun.8
+  fortiVpn2:
+    phase1:            fgVpn2Tun.2
+    phase2:            fgVpn2Tun.3
+    remote_ip:         fgVpn2Tun.5 | ip
+    remote_port:       fgVpn2Tun.6
+    local_ip:          fgVpn2Tun.8 | ip
+    local_port:        fgVpn2Tun.9
+    begin_ip:          fgVpn2Tun.11 | ip
+    end_ip:            fgVpn2Tun.13 | ip
+    src_port:          fgVpn2Tun.14
+    dst_begin_ip:      fgVpn2Tun.16 | ip
+    dst_end_ip:        fgVpn2Tun.18 | ip
+    dst_port:          fgVpn2Tun.19
+    sel_proto:         fgVpn2Tun.20
+    uptime:            fgVpn2Tun.21
+    bytes:             fgVpn2Tun.22
+    timeout:           fgVpn2Tun.23
+    octets_in:         fgVpn2Tun.24
+    octets_out:        fgVpn2Tun.25
+    status:            fgVpn2Tun.26
+    vdom_idx:          fgVpn2Tun.27
+
+  fortiVdom:
+    name:              fgVdEntry.2
+    op_mode:           fgVdEntry.3
+    ha_state:          fgVdEntry.4
+    cpu_usage:         fgVdEntry.5
+    mem_usage:         fgVdEntry.6
+    session_count:     fgVdEntry.7
+    session_rate:      fgVdEntry.8
+
+  fortiHa:
+    serial:            fgHA.2
+    cpu_perc:          fgHA.3
+    mem_perc:          fgHA.4
+    net_usage:         fgHA.5
+    curren_sessions:   fgHA.6
+    packets:           fgHA.7
+    bytes:             fgHA.8
+    hostname:          fgHA.11
+    in_sync:           fgHA.12
+    checksum:          fgHA.15
+    primary:           fgHA.16
+
+  fortiSensors:
+    name:              fgSensor.2
+    value:             fgSensor.3
+    alarm:             fgSensor.4
+
+  fortiCPU:
+    usage_perc:        fgCPU.2
+    usage_5sec:        fgCPU.3
+    type:              fgCPU.4
+    parent:            fgCPU.5
+    rx_packets:        fgCPU.6
+    tx_packets:        fgCPU.7
+    dropped_packets:   fgCPU.8
+    usage_user:        fgCPU.9
+    usage_sys:         fgCPU.10
+
+  fortiPolicy:
+    packets:           fgFWPol.2
+    bytes:             fgFWPol.3
+    LastUsed:          fgFWPol.4
+    packets64:         fgFWPol.5
+    bytes64:           fgFWPol.6
+
+  fortiPolicy6:
+    packets:           fgFWPol6.2
+    bytes:             fgFWPol6.3
+    LastUsed:          fgFWPol6.4
+
+  fortiIface:
+    vdom:              fgIface.1
+
+  rcPort:
+    type:              rcPort.2
+    result:            rcPort.7
+    auto_neg:          rcPort.11
+    admin_duplex:      rcPort.12
+    oper_duplex:       rcPort.13
+    admin_speed:       rcPort.14
+    oper_speed:        rcPort.15
+    locked:            rcPort.17
+    autoneg_support:   rcPort.18
+    vendor_desc:       rcPort.34
+    name:              rcPort.35
+    vrf_name_list:     rcPort.96
+    vrf_id:            rcPort.97
+    vrf_name:          rcPort.98
+    vrf_count:         rcPort.99
+
+  rcStatGig:
+    link_failure:      rcStatGig.2
+    packet_errors:     rcStatGig.3
+    carrier_errors:    rcStatGig.4
+    inactive_errors:   rcStatGig.5
+    inflow_ctrl:       rcStatGig.6
+    outflow_ctrl:      rcStatGig.7
+    in_pcf:            rcStatGig.8
+    out_pcf:           rcStatGig.9
+    inflow64_ctrl:     rcStatGig.10
+    outflow64_ctrl:    rcStatGig.11
+
+  tengIf:
+    description:       tengIf.2
+    type:              tengIf.3
+    mtu:               tengIf.4
+    speed:             tengIf.5
+    mac:               tengIf.6 | mac
+    admin_status:      tengIf.7
+    oper_status:       tengIf.8
+    last_change:       tengIf.9
+    in_bytes:          tengIf.10
+    in_unicast:        tengIf.11
+    in_discards:       tengIf.13
+    in_errors:         tengIf.14
+    in_unknown:        tengIf.15
+    out_bytes:         tengIf.16
+    out_unicast:       tengIf.17
+    out_discards:      tengIf.19
+    out_errors:        tengIf.20
+    name:              tengIfX.2
+    in_multicast:      tengIfX.3
+    in_broadcast:      tengIfX.4
+    out_multicast:     tengIfX.5
+    out_broadcast:     tengIfX.6
+    in_bytes64:        tengIfX.7
+    in_unicast64:      tengIfX.8
+    in_multicast64:    tengIfX.9
+    in_broadcast64:    tengIfX.10
+    out_bytes64:       tengIfX.11
+    out_unicast64:     tengIfX.12
+    out_multicast64:   tengIfX.13
+    out_broadcast64:   tengIfX.14
+    trap_enable:       tengIfX.15
+    high_speed:        tengIfX.16
+    promiscuous:       tengIfX.17
+    has_connector:     tengIfX.18
+
+  rcOptical:
+    status_mask:       rcPlugOptModEntry.2
+    calibration:       rcPlugOptModEntry.3
+    power_measure:     rcPlugOptModEntry.4
+    connector:         rcPlugOptModEntry.5
+    vendor:            rcPlugOptModEntry.6
+    partno:            rcPlugOptModEntry.7
+    revision:          rcPlugOptModEntry.8
+    serial:            rcPlugOptModEntry.9
+    datecode:          rcPlugOptModEntry.10
+    PEC:               rcPlugOptModEntry.11
+    CLEI:              rcPlugOptModEntry.12
+    supports_ddm:      rcPlugOptModEntry.13
+    aux1mon:           rcPlugOptModEntry.14
+    aux2mon:           rcPlugOptModEntry.15
+    color:             rcPlugOptModEntry.16
+    temp_100uC:        rcPlugOptModEntry.17
+    temp_hi_alarm:     rcPlugOptModEntry.18
+    temp_lo_alarm:     rcPlugOptModEntry.19
+    temp_hi_warn:      rcPlugOptModEntry.20
+    temp_lo_warn:      rcPlugOptModEntry.21
+    volt_100uV:        rcPlugOptModEntry.22
+    volt_hi_alarm:     rcPlugOptModEntry.23
+    volt_lo_alarm:     rcPlugOptModEntry.24
+    volt_hi_warn:      rcPlugOptModEntry.25
+    volt_lo_warn:      rcPlugOptModEntry.26
+    bias_100nA:        rcPlugOptModEntry.27
+    bias_hi_alarm:     rcPlugOptModEntry.28
+    bias_lo_alarm:     rcPlugOptModEntry.29
+    bias_hi_warn:      rcPlugOptModEntry.30
+    bias_lo_warn:      rcPlugOptModEntry.31
+    tx_power_100udBm:  rcPlugOptModEntry.32
+    tx_power_hi_alarm: rcPlugOptModEntry.33
+    tx_power_lo_alarm: rcPlugOptModEntry.34
+    tx_power_hi_warn:  rcPlugOptModEntry.35
+    tx_power_lo_warn:  rcPlugOptModEntry.36
+    rx_power_100udBm:  rcPlugOptModEntry.37
+    rx_power_hi_alarm: rcPlugOptModEntry.38
+    rx_power_lo_alarm: rcPlugOptModEntry.39
+    rx_power_hi_warn:  rcPlugOptModEntry.40
+    rx_power_lo_warn:  rcPlugOptModEntry.41
+    aux1:              rcPlugOptModEntry.42
+    aux1_hi_alarm:     rcPlugOptModEntry.43
+    aux1_lo_alarm:     rcPlugOptModEntry.44
+    aux1_hi_warn:      rcPlugOptModEntry.45
+    aux1_lo_warn:      rcPlugOptModEntry.46
+    aux2:              rcPlugOptModEntry.47
+    aux2_hi_alarm:     rcPlugOptModEntry.48
+    aux2_lo_alarm:     rcPlugOptModEntry.49
+    aux2_hi_warn:      rcPlugOptModEntry.50
+    aux2_lo_warn:      rcPlugOptModEntry.51
+    temp_status:       rcPlugOptModEntry.52
+    volt_status:       rcPlugOptModEntry.53
+    bias_status:       rcPlugOptModEntry.54
+    tx_power_status:   rcPlugOptModEntry.55
+    rx_power_status:   rcPlugOptModEntry.56
+    aux1_status:       rcPlugOptModEntry.57
+    aux2_status:       rcPlugOptModEntry.58
+    q1_bias_100nA:     rcPlugOptModEntry.59
+    q2_bias_100nA:     rcPlugOptModEntry.60
+    q3_bias_100nA:     rcPlugOptModEntry.61
+    q4_bias_100nA:     rcPlugOptModEntry.62
+    q1_tx_power_100udBm: rcPlugOptModEntry.63
+    q2_tx_power_100udBm: rcPlugOptModEntry.64
+    q3_tx_power_100udBm: rcPlugOptModEntry.65
+    q4_tx_power_100udBm: rcPlugOptModEntry.66
+    q1_rx_power_100udBm: rcPlugOptModEntry.67
+    q2_rx_power_100udBm: rcPlugOptModEntry.68
+    q3_rx_power_100udBm: rcPlugOptModEntry.69
+    q4_rx_power_100udBm: rcPlugOptModEntry.70
+    q1_bias_status:    rcPlugOptModEntry.71
+    q2_bias_status:    rcPlugOptModEntry.72
+    q3_bias_status:    rcPlugOptModEntry.73
+    q4_bias_status:    rcPlugOptModEntry.74
+    q1_tx_power_status: rcPlugOptModEntry.75
+    q2_tx_power_status: rcPlugOptModEntry.76
+    q3_tx_power_status: rcPlugOptModEntry.77
+    q4_tx_power_status: rcPlugOptModEntry.78
+    q1_rx_power_status: rcPlugOptModEntry.79
+    q2_rx_power_status: rcPlugOptModEntry.80
+    q3_rx_power_status: rcPlugOptModEntry.81
+    q4_rx_power_status: rcPlugOptModEntry.82

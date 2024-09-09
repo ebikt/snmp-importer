@@ -1,0 +1,683 @@
+sysinfo_short:
+  tables:
+    snmp_sysinfo:
+      labels:
+        name: system.name
+      metrics:
+        - expr: system.uptime
+          suffix: ''
+          influx: uptime
+          type: gauge
+          help: System uptime
+      scalar: yes
+
+ifaces64:
+  tables:
+    snmp_interfaces:
+      metrics:
+        # Metrics must have numeric value
+        # loop - generate entry for each combination of values of loop variables
+        #        mapping of loop variables, each has its values listed in sequence
+        # expr - expression to compute metric, if it is single variable, then it is added to scrape list
+        # suffix - prometheus metric will be named ${table_name}_${suffix}, loop variables will be added as labels
+        #        - if suffix is empty then it will be used as value for index metric
+        # influx - name of influxb value on influxdb row, mandatory if loop is used, else defaults to value of suffix
+        #        - if influx is empty or none, then this metric wont go into influxdb
+        # type - prometheus metric type
+        # help - prometheus metric help
+        - loop:
+            dir: [in, out]
+          expr: 'ifaces.${dir}_bytes'
+          suffix: bytes
+          influx: '${dir}_bytes'
+          type: counter
+          help: Traffic on interface in bytes
+
+        - loop:
+            dir: [in, out]
+            type: [unicast, multicast, broadcast]
+          expr: 'ifaces.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: packets
+          type: counter
+          help: Traffic on interface in number of packets
+
+        - loop:
+            dir: [in, out]
+            type: [discards, errors]
+          expr: 'ifaces.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: errors
+          type: counter
+          help: Errors on interface
+
+        - expr: 'ifaces.admin_status * 10 + ifaces.oper_status'
+          suffix: ''
+          type: gauge
+          help: inteface status
+
+        - expr: ifaces.high_speed
+          suffix: speed
+          type: gauge
+          help: Interface speed (megabytes)
+
+      labels:
+        # label name to label expression
+        # these are treated as dimensions for prometheus
+        # and as string metrics for influxdb
+        admin_status: ifaces.admin_status
+        oper_status: ifaces.oper_status
+
+      dimensions:
+        # label name to label expression
+        # these are treated as labels (dimensions) both in prometheus and influxdb
+        mac: ifaces.mac
+        name: ifaces.name
+        alias: ifaces.alias
+        descr: ifaces.description
+        iftype: ifaces.type
+
+      # list of additional inputs to scrape
+      # this is needed for expressions that do not consist of just single input variable
+      scrape: []
+
+lldp:
+  tables:
+    snmp_lldp_info:
+      dimensions:
+        chassis_id:  lldpLocal.chassis_id
+        name:        lldpLocal.name
+      labels:
+        description: lldpLocal.description
+      metrics:
+        - expr: 1
+          suffix: ''
+          help: "Local LLDP information about chassis"
+    snmp_lldp_local:
+      dimensions:
+        port_sub:    lldpLocal.port_subtype
+        port_id:     lldpLocal.port_id
+      labels:
+        port_desc:   lldpLocal.port_desc
+      metrics:
+        - expr: 1
+          suffix: ''
+          help: "Local LLDP information about ports"
+    snmp_lldp_remote:
+      dimensions:
+        subtype:     lldpRemote.subtype
+        chassis_id:  lldpRemote.chassis_id
+        name:        lldpRemote.name
+        port_id:     lldpRemote.port_id
+        port_sub:    lldpRemote.port_subtype
+        port_id:     lldpRemote.port_id
+      labels:
+        description: lldpRemote.description
+        port_desc:   lldpRemote.port_desc
+      metrics:
+        - expr: 1
+          suffix: ''
+          help: "Observed remote LLDP information"
+
+h3c_components:
+  tables:
+    snmp_components:
+      dimensions:
+        descr:  physical.description
+        class:  physical.class
+        name:   physical.name
+        hw_rev: physical.hw_rev
+        fw_rev: physical.fw_rev
+        sw_rev: physical.sw_rev
+        model:  physical.model
+        mac:    hh3cPhys.mac
+        serial: hh3cPhys.serial
+
+      labels:
+        admin_status: hh3cPhys.admin_status
+        oper_status:  hh3cPhys.oper_status
+
+      metrics:
+        - expr: 'hh3cPhys.admin_status * 10 + hh3cPhys.oper_status'
+          suffix: ''
+          type: gauge
+          help: Component status
+
+        - loop:
+            res: [ cpu, mem ]
+          expr: hh3cPhys.${res}_perc
+          suffix: ${res}
+          type: gauge
+          help: ${res} usage percent
+
+        - expr: hh3cPhys.temperature
+          suffix: temp
+          type: gauge
+          help: temperature (celsius)
+
+        - expr: hh3cPhys.uptime
+          suffix: uptime
+          type: gauge
+          help: uptime (seconds)
+
+h3c_ifaces_txr:
+  include:
+    - ifaces64
+  merge_tables:
+    snmp_interfaces:
+      dimensions:
+        slot:     str(ifaces.description).rsplit("/",1)[0]
+        txr_hw:       hh3cOptical.hw_type
+        txr_type:     hh3cOptical.txr_type
+        txr_color:    hh3cOptical.wave_len
+        txr_distance: hh3cOptical.txr_distance
+        txr_serial:   hh3cOptical.serial
+      scrape:
+        - hh3cOptical.rx_power_dBm
+        - hh3cOptical.tx_power_dBm
+        - hh3cOptical.temperature
+        - hh3cOptical.voltage_10mV
+        - hh3cOptical.tx_bias_10uA
+      metrics:
+        - loop:
+            dir: [tx, rx]
+          expr: None if hh3cOptical.${dir}_power_dBm is None or hh3cOptical.${dir}_power_dBm > 65534 else hh3cOptical.${dir}_power_dBm / 100.0
+          suffix: txr_power
+          influx: txr_${dir}_power
+          type: gauge
+          help: Transmit/receive power in dBm
+          tags:
+            tag: >-
+              None     if not hh3cOptical.txr_type             else
+              "40"     if hh3cOptical.${dir}_power_dBm < -3000 else
+              "10"     if hh3cOptical.${dir}_power_dBm < -1000 else
+              "high"   if hh3cOptical.${dir}_power_dBm  < -500 else
+              "normal"
+
+        - expr: None if hh3cOptical.temperature is None or hh3cOptical.temperature > 65534 else hh3cOptical.temperature
+          suffix: txr_temperature
+          type: gauge
+          help: temperature in Celsius
+        - expr: None if hh3cOptical.voltage_10mV is None or hh3cOptical.voltage_10mV > 65534 else hh3cOptical.voltage_10mV * 10
+          suffix: txr_voltage
+          type: gauge
+          help: voltage in mV
+        - expr: None if hh3cOptical.tx_bias_10uA is None or hh3cOptical.tx_bias_10uA > 65534 else hh3cOptical.tx_bias_10uA * 10
+          suffix: txr_bias
+          type: gauge
+          help: TX bias in 1uA
+          tags:
+            tag: >-
+              None     if not hh3cOptical.txr_type        else
+              "zero"   if hh3cOptical.tx_bias_10uA    < 1 else
+              "high"   if hh3cOptical.tx_bias_10uA > 1100 else
+              "normal"
+
+h3c_lsw_9500:
+  tables:
+    # Warning, adding snmp columns unknown to coreswitch breaks scraping
+    snmp_h3c_lsw:
+      dimensions:
+        type: hh3cLswSlot.type
+      labels:
+        admin_status: hh3cLswSlot.admin_status
+        oper_status:  hh3cLswSlot.oper_status
+      metrics:
+        - expr: 'hh3cLswSlot.admin_status * 10 + hh3cLswSlot.oper_status'
+          suffix: ''
+          type: gauge
+          help: inteface status
+        - expr: hh3cLswSlot.cpu_perc
+          suffix: cpu
+          type: gauge
+          help: 'cpu usage (percent)'
+        - expr: hh3cLswSlot.mem_perc
+          suffix: mem
+          type: gauge
+          help: 'mem usage (percent)'
+        - expr: hh3cLswSlot.mem
+          suffix: mem_total
+          type: gauge
+          help: 'total memory'
+        - expr: hh3cLswSlot.mem_phys
+          suffix: mem_physical
+          type: gauge
+          help: 'physical memory'
+        - expr: hh3cLswSlot.temperature
+          suffix: temp
+          type: gauge
+          help: 'temperature (celsius)'
+
+h3c_acl:
+  tables:
+    snmp_h3c_acl_basic:
+      dimensions:
+        srcprefix:  hh3cAclBasic.src_prefix
+        srctype:    hh3cAclBasic.src_type
+        srcaddr:    hh3cAclBasic.src_addr
+        desc:       hh3cAclBasic.comment
+      metrics:
+        - expr: hh3cAclBasic.count
+          suffix: ''
+          influx: 'count'
+          type: counter
+          help: 'count of matches'
+    snmp_h3c_acl_advanced:
+      dimensions:
+        desc:       hh3cAclAdvanced.comment
+        srctype:    hh3cAclAdvanced.src_type
+        srcaddr:    hh3cAclAdvanced.src_addr
+        srcprefix:  hh3cAclAdvanced.src_prefix
+        srcport1:  hh3cAclAdvanced.src_port1
+        srcport2:  hh3cAclAdvanced.src_port2
+        dsttype:    hh3cAclAdvanced.dst_type
+        dstaddr:    hh3cAclAdvanced.dst_addr
+        dstprefix:  hh3cAclAdvanced.dst_prefix
+        dstport1:  hh3cAclAdvanced.dst_port1
+        dstport2:  hh3cAclAdvanced.dst_port2
+      metrics:
+        - expr: hh3cAclAdvanced.count
+          suffix: ''
+          influx: 'count'
+          type: counter
+          help: 'count of matches'
+
+forti_vdom:
+  tables:
+    snmp_forti_vdom:
+      dimensions:
+        name: fortiVdom.name
+        op_mode: fortiVdom.op_mode
+      metrics:
+        - expr: fortiVdom.ha_state
+          suffix: ''
+          influx: ha_state
+          type: gauge
+          help: 'ha cluster meber state'
+        - expr: fortiVdom.cpu_usage
+          suffix: cpu
+          type: gauge
+          help: 'cpu usage of vdom (percent)'
+        - expr: fortiVdom.mem_usage
+          suffix: mem
+          type: gauge
+          help: 'mem usage of vdom (percent)'
+        - expr: fortiVdom.session_count
+          suffix: active_sessions
+          type: gauge
+          help: 'active session count'
+        - expr: fortiVdom.session_rate
+          suffix: session_rate
+          type: gauge
+          help: 'new sessions rate' #FIXME unit?
+forti_ssl_vpn:
+  tables:
+    snmp_forti_sslvpn:
+      transform: |
+        import ipaddress, bisect
+
+        vlans = [ x.split() for x in """
+          centrum_ITO_1   10.128.64.65    10.128.64.94
+          centrum_ITO     10.128.64.97    10.128.64.126
+          centrum_ITO_2   10.128.64.224   10.128.64.254
+          sre_mail        10.128.69.33    10.128.69.62
+          sre_blackbox    10.128.69.97    10.128.69.126
+          sre_sklep       10.128.69.161   10.128.69.190
+          officeIT        10.128.101.130  10.128.101.158
+          CommonUsers     10.128.122.2    10.128.122.254
+          centrum_ALL     10.128.201.2    10.128.201.254
+          SK              10.128.203.2    10.128.203.254
+          zamestnanci     10.128.252.1    10.128.252.126
+          dalten_OLD      192.168.160.193 192.168.160.222
+          dalten          192.168.168.193 192.168.168.222
+        """.split("\n") ]
+        vlans = [ x for x in vlans if len(x) == 3 ]
+        vlans = [ (ipaddress.ip_address(ip_high), ipaddress.ip_address(ip_low),name) for name, ip_low, ip_high in vlans ]
+        prev_ip = 0
+        for last, first, name in vlans:
+          assert prev_ip < int(first) <= int(last)
+          prev_ip = int(last)
+        vlans.append( (ipaddress.ip_address('0.0.0.0'), ipaddress.ip_address('0.0.0.0'), '-') )
+
+        class Transform:
+          def __init__(self, inputs):
+            ip = ipaddress.ip_address(inputs.fortiVpn.tunnel_ip)
+            i = bisect.bisect(vlans[:-1], (ip,))
+            if vlans[i][1] <= ip <= vlans[i][0]:
+              self.range_tag = vlans[i][2]
+            else:
+              self.range_tag = '-'
+
+      dimensions:
+        vdom_id:   fortiVpn.vdom_idx
+        username:  fortiVpn.username
+        tunnel_ip: fortiVpn.tunnel_ip
+        range:     transform.range_tag
+      labels:
+        source_ip: fortiVpn.source_ip
+      metrics:
+        - expr:   fortiVpn.uptime
+          suffix: ''
+          influx: uptime
+          type:   gauge
+          help:   'session uptime'
+        - expr:   fortiVpn.bytes_in
+          suffix: bytes_in
+          type:   counter
+          help:   'transferred bytes in'
+        - expr:   fortiVpn.bytes_out
+          suffix: bytes_out
+          type:   counter
+          help:   'transferred bytes out'
+
+forti_tunnel:
+  tables:
+    snmp_forti_tunnel:
+      dimensions:
+        vdom:        fortiVpn2.vdom_idx
+        phase1:      fortiVpn2.phase1
+        phase2:      fortiVpn2.phase2
+        remote_ip:   fortiVpn2.remote_ip
+        remote_port: fortiVpn2.remote_port
+        local_ip:    fortiVpn2.local_ip
+        local_port:  fortiVpn2.local_port
+      metrics:
+        - expr:      fortiVpn2.status
+          suffix:    ''
+          influx:    status
+          type:      gauge
+          help:      Tunnel status
+        - expr:      fortiVpn2.uptime
+          suffix:    uptime
+          type:      gauge
+          help:      Tunnel Life Time
+        - expr:      fortiVpn2.timeout
+          suffix:    timeout
+          type:      gauge
+          help:      Tunnel Timeout
+        - expr:      fortiVpn2.octets_in
+          suffix:    octets_in
+          type:      counter
+          help:      Tunnel rx bytes
+        - expr:      fortiVpn2.octets_out
+          suffix:    octets_out
+          type:      counter
+          help:      Tunnel tx bytes
+
+forti_sensors:
+  tables:
+    snmp_forti_sensors:
+      dimensions:
+        name:  fortiSensors.name
+        alarm: fortiSensors.alarm
+      scrape: [ fortiSensors.value ]
+      metrics:
+        # FIXME failsafe?
+        - expr: float(fortiSensors.value)
+          suffix: ''
+          influx: value
+          type: gauge
+          help: Sensor reading
+
+forti_policy:
+  tables:
+    # FIXME merge these two tables into one
+    snmp_forti_policy4:
+      metrics:
+        - expr: fortiPolicy.packets64
+          suffix: packets
+          type: counter
+          help: packets counter on policy
+        - expr: fortiPolicy.bytes64
+          suffix: bytes
+          type: counter
+          help: bytes counter on policy
+    snmp_forti_policy6:
+      metrics:
+        - expr: fortiPolicy6.packets
+          suffix: packets
+          type: counter
+          help: packets counter on policy
+        - expr: fortiPolicy6.bytes
+          suffix: bytes
+          type: counter
+          help: bytes counter on policy
+
+extreme_ifaces_txr:
+  include:
+    - ifaces64
+  merge_tables:
+    snmp_interfaces:
+      transform: |
+        import re
+        slotre = re.compile(r'[ /][^ /]*$')
+        class Transform:
+          def __init__(self, inputs):
+            self.slot = slotre.sub('', str(inputs.ifaces.description))
+            for outp, inp, splitter, valtype, default in [
+              ('temp', 'temperature',  ' C ', int, 0),
+              ('rx_power', 'rx_power_dBm', ' dBm ', float, -40.0),
+              ('tx_power', 'tx_power_dBm', ' dBm ', float, -40.0),
+              ('bias', 'tx_bias_mA', ' mAmps ', float, 0.0),
+            ]:
+              if inputs.brocadeOptical[inp] is None:
+                setattr(self, outp, None)
+                setattr(self, outp + '_status', None)
+                continue
+              vals = str(inputs.brocadeOptical[inp]).split(splitter, 1)
+              if len(vals) == 2:
+                setattr(self, outp, valtype(vals[0]))
+                setattr(self, outp + '_status', vals[1])
+              else:
+                setattr(self, outp, default)
+                setattr(self, outp + '_status', vals[0])
+      dimensions:
+        slot: transform.slot
+      scrape:
+        - brocadeOptical.temperature
+        - brocadeOptical.tx_power_dBm
+        - brocadeOptical.rx_power_dBm
+        - brocadeOptical.tx_bias_mA
+      metrics:
+        - loop:
+            dir: [tx, rx]
+          expr: transform.${dir}_power
+          influx: txr_${dir}_power
+          suffix: txr_power
+          type: gauge
+          help: Transmit/receive power in dBm
+          tags:
+            tag: >-
+              None     if transform.${dir}_power is None else
+              "40"     if transform.${dir}_power < -30 else
+              "10"     if transform.${dir}_power < -10 else
+              "high"   if transform.${dir}_power <  -5 else
+              "normal"
+            status:   transform.${dir}_power_status
+        - expr: transform.temp
+          suffix: txr_temperature
+          type: gauge
+          help: temperature in Celsius
+          tags:
+            status: transform.temp_status
+        - expr: transform.bias
+          suffix: txr_bias
+          type: gauge
+          help: TX bias in 1uA
+          tags:
+            tag: >-
+              None     if transform.bias is None else
+              "zero"   if transform.bias < 0.01 else
+              "high"   if transform.bias > 11.0 else
+              "normal"
+            status: transform.bias_status
+
+sensors_entity:
+  tables:
+    snmp_sensors:
+      dimensions:
+        type:   sensors.type
+        status: sensors.oper_status
+        unit:   sensors.disp_unit
+      scrape:
+        - sensors.updaterate
+        - sensors.value
+        - sensors.scale
+      labels:
+        rate: sensors.updaterate / 1000.0 if sensors.updaterate is not None else None
+      metrics:
+        - expr: 'sensors.value * 1000.0 ** (sensors.scale-9) if sensors.value is not None else None'
+          suffix: ''
+          influx: status
+          type: gauge
+          help: Sensor value
+          tags:
+            descr:  physical.description
+            parent: physical.contained_in
+            rel:    physical.parent_rel_pos
+            hw:     physical.hw_rev
+            serial: physical.serial
+            model:  physical.model
+
+voss_ifaces:
+  tables:
+    snmp_interfaces:
+      metrics:
+        - loop:
+            dir: [in, out]
+          expr: 'tengIf.${dir}_bytes64'
+          suffix: bytes
+          influx: '${dir}_bytes'
+          type: counter
+          help: Traffic on interface in bytes
+
+        - loop:
+            dir: [in, out]
+            type: [unicast, multicast, broadcast]
+          expr: 'tengIf.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: packets
+          type: counter
+          help: Traffic on interface in number of packets
+
+        - loop:
+            dir: [in, out]
+            type: [discards, errors]
+          expr: 'tengIf.${dir}_${type}'
+          influx: '${dir}_${type}'
+          suffix: errors
+          type: counter
+          help: Errors on interface
+
+        - expr: 'tengIf.admin_status * 10 + tengIf.oper_status'
+          suffix: ''
+          type: gauge
+          help: inteface status
+
+        - expr: tengIf.high_speed
+          suffix: speed
+          type: gauge
+          help: Interface speed (megabytes)
+
+        - loop:
+            dir: [tx, rx]
+          expr: rcOptical.${dir}_power_100udBm * 1000 if rcOptical.${dir}_power_100udBm else None
+          suffix: txr_power
+          influx: txr_${dir}_power
+          type: gauge
+          help: Transmit/receive power in dBm
+          tags:
+            tag: >-
+              "40"     if rcOptical.${dir}_power_100udBm < -300000 else
+              "10"     if rcOptical.${dir}_power_100udBm < -100000 else
+              "high"   if rcOptical.${dir}_power_100udBm  < -50000 else
+              "normal"
+
+        - expr: rcOptical.temp_100uC * 10000 if rcOptical.temp_100uC else None
+          suffix: txr_temperature
+          type: gauge
+          help: temperature in Celsius
+        - expr: rcOptical.volt_100uV * 10000 if rcOptical.volt_100uV else None
+          suffix: txr_voltage
+          type: gauge
+          help: voltage in mV
+        - expr: rcOptical.bias_100nA * 10 if rcOptical.bias_100nA else None
+          suffix: txr_bias
+          type: gauge
+          help: TX bias in 1uA
+          tags:
+            tag: >-
+              "zero"   if rcOptical.bias_100nA    < 100 else
+              "high"   if rcOptical.bias_100nA > 110000 else
+              "normal"
+        # We do not collect split-data (q1, q2, q3, q4) (yet)
+
+
+      labels:
+        admin_status: tengIf.admin_status
+        oper_status: tengIf.oper_status
+
+      dimensions:
+        mac:        tengIf.mac
+        name:       tengIf.name
+        descr:      tengIf.description
+        iftype:     tengIf.type
+        slot:       str(tengIf.name).rsplit(",",1)[0]
+        txr_hw:     rcOptical.vendor
+        txr_type:   rcOptical.connector
+        txr_color:  rcOptical.color
+        txr_serial: rcOptical.serial
+
+      scrape:
+        - rcOptical.rx_power_100udBm
+        - rcOptical.tx_power_100udBm
+        - rcOptical.temp_100uC
+        - rcOptical.volt_100uV
+        - rcOptical.bias_100nA
+
+# table collections
+basic:
+  include:
+    - sysinfo_short
+    - ifaces64
+
+h3c_5120:
+  include:
+    - sysinfo_short
+    - ifaces64
+    - h3c_components
+    # - lldp
+
+h3c_9500:
+  include:
+    - sysinfo_short
+    - h3c_ifaces_txr
+    - h3c_components
+    - h3c_lsw_9500
+#    - h3c_acl
+#    - lldp
+
+fortigate_6:
+  include:
+    - forti_vdom
+    - forti_tunnel
+    - forti_sensors
+    - forti_ssl_vpn
+    # - forti_policy
+
+vdx:
+  include:
+    - sysinfo_short
+    - extreme_ifaces_txr
+#    - lldp
+
+extreme_5420:
+  include:
+    - sysinfo_short
+    - voss_ifaces
+
+extreme_5520:
+  include:
+    - sysinfo_short
+    - ifaces64
+    - sensors_entity
