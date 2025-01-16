@@ -132,7 +132,7 @@ class Main:
         await scraper.run()
         executor.reload(schedule_path=YamlValue([],"stop"),output_path=YamlValue({},"stop"))
         executor.commit_reload()
-        await asyncio.wait(ro.task for ro in executor.output_runners)
+        await asyncio.wait([ro.task for ro in executor.output_runners])
 
     async def cfg(self, limit:float) -> None:
         pass
