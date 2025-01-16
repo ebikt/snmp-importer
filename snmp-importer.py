@@ -3,8 +3,16 @@
 import asyncio, argparse, os, sys, json
 from typing import cast, Annotated, Literal
 
-from snmp_importer.config   import YamlValue
-from snmp_importer.executor import Executor
+from snmp_importer.config      import YamlValue
+from snmp_importer.executor    import Executor
+try:
+    from aio_exporter.aio_sdnotify import SystemdNotifier
+except ImportError:
+    MYPY=False
+    if not MYPY:
+        class SystemdNotifier:
+            async def notify(self, **statekw:bytes|str|int) -> bool:
+                return False
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -101,11 +109,16 @@ class Main:
         asyncio.run(getattr(self, mode)(limit)) # type: ignore
 
     async def run(self, limit:float) -> None:
+        if not limit:
+            sdn = SystemdNotifier()
+            await sdn.notify(status="Starting...")
         executor = self.executor
         run = asyncio.create_task(executor.run())
         if limit > 0:
             await asyncio.sleep(limit)
             return #FIXME
+        else:
+            await sdn.notify(status="Running", ready=1)
         await run
 
     async def test(self, limit:float) -> None:
