@@ -181,7 +181,7 @@ h3c_ifaces_txr:
       metrics:
         - loop:
             dir: [tx, rx]
-          expr: None if hh3cOptical.${dir}_power_dBm is None or hh3cOptical.${dir}_power_dBm > 65534 else hh3cOptical.${dir}_power_dBm / 100.0
+          expr: None if hh3cOptical.${dir}_power_dBm is None or hh3cOptical.${dir}_power_dBm > 65534 else hh3cOptical.${dir}_power_dBm * 0.01
           suffix: txr_power
           influx: txr_${dir}_power
           type: gauge
@@ -194,18 +194,18 @@ h3c_ifaces_txr:
               "high"   if hh3cOptical.${dir}_power_dBm  < -500 else
               "normal"
 
-        - expr: None if hh3cOptical.temperature is None or hh3cOptical.temperature > 65534 else hh3cOptical.temperature
+        - expr: None if hh3cOptical.temperature is None or hh3cOptical.temperature > 65534 else hh3cOptical.temperature * 1.0
           suffix: txr_temperature
           type: gauge
           help: temperature in Celsius
-        - expr: None if hh3cOptical.voltage_10mV is None or hh3cOptical.voltage_10mV > 65534 else hh3cOptical.voltage_10mV * 10
+        - expr: None if hh3cOptical.voltage_10mV is None or hh3cOptical.voltage_10mV > 65534 else hh3cOptical.voltage_10mV * 0.01
           suffix: txr_voltage
           type: gauge
-          help: voltage in mV
-        - expr: None if hh3cOptical.tx_bias_10uA is None or hh3cOptical.tx_bias_10uA > 65534 else hh3cOptical.tx_bias_10uA * 10
+          help: voltage in V
+        - expr: None if hh3cOptical.tx_bias_10uA is None or hh3cOptical.tx_bias_10uA > 65534 else hh3cOptical.tx_bias_10uA * 0.00001
           suffix: txr_bias
           type: gauge
-          help: TX bias in 1uA
+          help: TX bias in A
           tags:
             tag: >-
               None     if not hh3cOptical.txr_type        else
@@ -455,7 +455,7 @@ extreme_ifaces_txr:
           def __init__(self, inputs):
             self.slot = slotre.sub('', str(inputs.ifaces.description))
             for outp, inp, splitter, valtype, default in [
-              ('temp', 'temperature',  ' C ', int, 0),
+              ('temp', 'temperature',  ' C ', float, 0.0),
               ('rx_power', 'rx_power_dBm', ' dBm ', float, -40.0),
               ('tx_power', 'tx_power_dBm', ' dBm ', float, -40.0),
               ('bias', 'tx_bias_mA', ' mAmps ', float, 0.0),
@@ -470,10 +470,10 @@ extreme_ifaces_txr:
                   setattr(self, outp, default)
                 else:
                   setattr(self, outp, valtype(vals[0]))
-                setattr(self, outp + '_status', vals[1])
+                setattr(self, outp + '_status', vals[1].lower())
               else:
                 setattr(self, outp, default)
-                setattr(self, outp + '_status', vals[0])
+                setattr(self, outp + '_status', vals[0].lower())
       dimensions:
         slot: transform.slot
       scrape:
@@ -503,7 +503,7 @@ extreme_ifaces_txr:
           help: temperature in Celsius
           tags:
             status: transform.temp_status
-        - expr: transform.bias
+        - expr: None if transform.bias is None else transform.bias * 0.001
           suffix: txr_bias
           type: gauge
           help: TX bias in 1uA
@@ -584,7 +584,7 @@ voss_ifaces:
 
         - loop:
             dir: [tx, rx]
-          expr: rcOptical.${dir}_power_100udBm * 1000 if rcOptical.${dir}_power_100udBm else None
+          expr: rcOptical.${dir}_power_100udBm * 0.0001 if rcOptical.${dir}_power_100udBm else None
           suffix: txr_power
           influx: txr_${dir}_power
           type: gauge
@@ -596,18 +596,18 @@ voss_ifaces:
               "high"   if rcOptical.${dir}_power_100udBm  < -50000 else
               "normal"
 
-        - expr: rcOptical.temp_100uC * 10000 if rcOptical.temp_100uC else None
+        - expr: rcOptical.temp_100uC * 0.0001 if rcOptical.temp_100uC else None
           suffix: txr_temperature
           type: gauge
           help: temperature in Celsius
-        - expr: rcOptical.volt_100uV * 10000 if rcOptical.volt_100uV else None
+        - expr: rcOptical.volt_100uV * 0.0001 if rcOptical.volt_100uV else None
           suffix: txr_voltage
           type: gauge
-          help: voltage in mV
-        - expr: rcOptical.bias_100nA * 10 if rcOptical.bias_100nA else None
+          help: voltage in V
+        - expr: rcOptical.bias_100nA * 0.0000001 if rcOptical.bias_100nA else None
           suffix: txr_bias
           type: gauge
-          help: TX bias in 1uA
+          help: TX bias in A
           tags:
             tag: >-
               "zero"   if rcOptical.bias_100nA    < 100 else
