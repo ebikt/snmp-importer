@@ -466,7 +466,10 @@ extreme_ifaces_txr:
                 continue
               vals = str(inputs.brocadeOptical[inp]).split(splitter, 1)
               if len(vals) == 2:
-                setattr(self, outp, valtype(vals[0]))
+                if "inf" in vals[0]:
+                  setattr(self, outp, default)
+                else:
+                  setattr(self, outp, valtype(vals[0]))
                 setattr(self, outp + '_status', vals[1])
               else:
                 setattr(self, outp, default)
