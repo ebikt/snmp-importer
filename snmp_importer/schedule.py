@@ -56,16 +56,19 @@ class SchedTable(Generic[T]):
         self.stop_event.clear()
 
     def add(self, when:SchedPrimitive, *what:T) -> None:
-        schedlogger.info(f"{self} add {when}, {what}")
+        schedlogger.info(f"{self} add {when}, [{what[0]}, ...({len(what)})]")
         if self.period % when.period:
             period = when.period * self.period // math.gcd(when.period, self.period)
             assert period % when.period == 0 and period % self.period == 0
             for key in list(self.table.keys()):
                 for p in range(1, period // self.period):
-                    self.table[key + p*self.period] = self.table[key]
+                    self.table[key + p*self.period] = self.table[key].copy()
             self.period = period
         for p in range(self.period // when.period):
-            self.table.setdefault(p*self.period + when.offset,[]).extend(what)
+            self.table.setdefault(p*when.period + when.offset,[]).extend(what)
+        for event_offset, event_data in sorted(self.table.items()):
+            schedlogger.log(6,f"{self}     offset:{event_offset:5d} tasks:{event_data[0]}, ...({len(event_data)})")
+        schedlogger.log(6,f"{self}   period: {self.period}")
 
     def stop(self) -> None:
         self.stop_time = time.time()
@@ -83,7 +86,7 @@ class SchedTable(Generic[T]):
         pos    = bisect(schedule, (now_offset,))
         next_t = now
         for event_offset, event_data in schedule:
-            schedlogger.log(21, f"{self}    table: offset:{event_offset:5d} tasks:{event_data}")
+            schedlogger.log(21, f"{self}    table: offset:{event_offset:5d} tasks:{event_data[0]}, ...({len(event_data)})")
         while not self.stop_event.is_set():
             if pos >= len(schedule):
                 pos = 0
@@ -99,7 +102,7 @@ class SchedTable(Generic[T]):
                     pass
                 else:
                     break
-            schedlogger.log(21, f"{self} callback {event_data}")
+            schedlogger.log(21, f"{self} callback {event_data[0]}, ...({len(event_data)})")
             callback(event_data.copy())
             pos += 1
         if next_t < self.stop_time:
