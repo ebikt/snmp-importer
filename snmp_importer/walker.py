@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import logging
 MYPY = False
 
 
@@ -123,6 +124,8 @@ from types import TracebackType
 
 from .config import YamlValue, ConfigError
 
+snmplogger = logging.getLogger('snmp')
+
 def parse_address(address:str) -> tuple[str, int|None]: # {{{
     if ':' not in address:
         parsed_host = address
@@ -174,6 +177,7 @@ class Target: # {{{
                 self.engine = snmp3.SnmpEngine()
             else:
                 self.engine = engine
+        snmplogger.log(5, f"{self}: {self.host}:{self.port} {path} self.engine (ipv6:{self.ipv6}, tcp:{self.tcp})")
 
     _FAMILIES:dict[bool|None,int] = {
         True:socket.AF_INET6,
@@ -181,6 +185,7 @@ class Target: # {{{
         None:0
     }
     async def resolve(self) -> SnmpTransportType:
+        snmplogger.log(5, f"{self}: {self.host}:{self.port} getaddrinfo")
         results = await asyncio.get_running_loop().getaddrinfo(self.host, self.port,
             family=self._FAMILIES[self.ipv6],
             type=socket.SOCK_DGRAM,
@@ -208,6 +213,7 @@ class Target: # {{{
                 self.transport,
                 snmp3.ContextData(),
             )
+        snmplogger.log(5, f"{self}: {self.host}:{self.port} getaddrinfo -> {addr}")
         return self.transport
 
     if MYPY:
@@ -227,7 +233,9 @@ class Target: # {{{
             while retries > 0:
                 try:
                     async with asyncio.timeout(None if self.timeout <= 0 else self.timeout):
+                        snmplogger.log(1,f"{self} await {command}")
                         errorIndication, errorStatus, errorIndex, result = await command(*common_args, *args, *varBinds, **kwargs)
+                        snmplogger.log(1,f"{self} await {command} done")
                         if errorIndex or errorStatus or errorIndication:
                             try:
                                 errorOid = varBinds[errorIndex - 1][0] if errorIndex else None
@@ -244,6 +252,7 @@ class Target: # {{{
                             raise ErrorIndication(repr(errorStatus))
                         return result
                 except TimeoutError:
+                    snmplogger.log(7,f"{self} {command} timeout, retries: {retries}")
                     retries -= 1
                 else:
                     assert False, "never happens"
@@ -272,6 +281,7 @@ class Target: # {{{
                 bulkWidth,
             )
         def close(self) -> None:
+            snmplogger.log(3,f"{self} close")
             self.engine.closeDispatcher() 
 # }}}
 
@@ -342,6 +352,7 @@ class Walker: # {{{
             walkBulkLength:int = 30,
             walkBulkWidth:int = 10
         ): # {{{
+        snmplogger.log(6, f"{self}: ({target.host}:{target.port}) new")
         self.target = target
         self.bulkEnabled = bulkEnabled
         self.getBulkLength = getBulkLength
@@ -393,6 +404,7 @@ class Walker: # {{{
             individual oid may be string representation or ObjectName, or tuple (oid, max_items),
             where max_items is maximum scraped values for that oid
         """
+        snmplogger.log(4, f"{self}: ({self.target.host}:{self.target.port}) walk start")
         if bulkWidth is None:
             bulkWidth = self.walkBulkWidth
         if bulkLength is None:
@@ -439,6 +451,7 @@ class Walker: # {{{
                         oidSet.pop(vecOid, None)
                         if offset >= i and offset > 0:
                             offset = offset - 1
+        snmplogger.log(4,f"{self}: ({self.target.host}:{self.target.port}) walk end")
         return vectors
     # }}}
 # }}}

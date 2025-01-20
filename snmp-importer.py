@@ -2,13 +2,14 @@
 
 import asyncio, argparse, os, sys, json
 from typing import cast, Annotated, Literal
+import logging.config
 
 from snmp_importer.config      import YamlValue
 from snmp_importer.executor    import Executor
+MYPY=False
 try:
     from aio_exporter.aio_sdnotify import SystemdNotifier
 except ImportError:
-    MYPY=False
     if not MYPY:
         class SystemdNotifier:
             async def notify(self, **statekw:bytes|str|int) -> bool:
@@ -20,6 +21,48 @@ class ArgMeta: # {{{
     __metadata__: tuple[str, dict[str, object]]
 
 class Deleted: pass
+# }}}
+
+class LogFormat(logging.Formatter): # {{{
+    def format(self, record:logging.LogRecord) -> str:
+        record.cl = self.level_color(record.levelno)
+        return super().format(record)
+
+    if not MYPY:
+        def __init__(self, *args, **kwargs) -> None:
+            self._colors = kwargs.pop('color')
+            super().__init__(*args, **kwargs)
+
+    _LEVEL_NAMES = {
+        10: 'DBG',
+        20: 'INF',
+        30: 'WRN',
+        40: 'ERR',
+        50: 'CRI',
+    }
+
+    _LEVEL_COLORS = [
+        "30;1",
+        "34",
+        "37",
+        "33",
+        "31",
+        "31;1",
+    ]
+    _colors = True
+
+    def level_color(self, level:int) -> str:
+        if level in self._LEVEL_NAMES:
+            txt = self._LEVEL_NAMES[level]
+        elif 10 < level < 60:
+            offset = level % 10
+            txt = f"{self._LEVEL_NAMES[level-offset][:1]}_{offset}"
+        else:
+            txt = f"{level:3d}"
+        if not self._colors:
+            return txt
+        level = min(max(0,level // 10), len(self._LEVEL_COLORS)-1)
+        return f"\x1b[{self._LEVEL_COLORS[level]}m{txt}\x1b[0m"
 # }}}
 
 class Args:
@@ -43,7 +86,10 @@ class Args:
                 help='Use colored stdout promfile writer as output.')]
     test_run:    Annotated[int,      '-R', dict(default=0, metavar='SECONDS',type=int,
                 help='Exit after SECONDS (for testing of scheduler)')]
-     # {{{
+
+    loglevel:    Annotated[str,      '-l', dict(default=None, metavar="LEVEL",
+                help='Logging level (number or python logging constant (CRITICAL, ERROR, WARNING, INFO, DEBUG)')]
+     # {{{ 
     def __init__(self) -> None:
         self.parser = argparse.ArgumentParser()
         deleted = Deleted()
@@ -55,8 +101,42 @@ class Args:
             self.parser.add_argument(long, short, **m) # type: ignore
 
     def parse(self) -> tuple[dict[str, YamlValue|str], Literal["run","test","cfg"], int]:
-        ret:dict[str, YamlValue|str] = {}
         args = self.parser.parse_args()
+        loglevel_str = cast(str|None, args.loglevel)
+        if loglevel_str is None:
+            if cast(object, args.test) is None:
+                loglevel = 20 # INFO
+            else:
+                loglevel = 0 # ALL
+        elif loglevel_str.isdigit():
+            loglevel = int(loglevel_str)
+        else:
+            try:
+                loglevel = cast(int, getattr(logging, loglevel_str.upper()))
+                assert isinstance(loglevel, int)
+            except Exception:
+                print("--loglevel expects number or python logging constant", file=sys.stderr)
+                sys.exit(1)
+        lg = logging.getLogger("test")
+        if not MYPY:
+            lf = LogFormat(
+                fmt   = "%(created).5f %(cl)s %(name)s(%(filename)s:%(lineno)s): %(message)s",
+                color = sys.stderr.isatty(),
+            )
+            lh = logging.StreamHandler(stream=sys.stderr) #FIXME this blocks!
+            lh.setFormatter(lf)
+            lr = logging.getLogger()
+            lr.setLevel(loglevel)
+            assert len(lr.handlers) == 0
+            lr.addHandler(lh)
+
+        logging.log(2,"2")
+        logging.log(1,"1")
+        logging.debug("dbg")
+        lg.log(2,"2")
+        lg.log(1,"1")
+        lg.debug("dbg")
+        ret:dict[str, YamlValue|str] = {}
         test_outputs = {}
         if cast(bool, args.test_prom):
             test_outputs['promtext'] = {'type':   'promtext', 'url': 'stdout', 'colors': True}
@@ -101,6 +181,7 @@ class Args:
 class Main:
     def __init__(self) -> None:
         args, mode, limit = Args().parse()
+        self.logger = logging.getLogger('Main')
         self.executor = Executor()
         ok, msg = self.executor.reload(**args)
         if not ok:
@@ -115,10 +196,13 @@ class Main:
         executor = self.executor
         run = asyncio.create_task(executor.run())
         if limit > 0:
+            self.logger.info(f"running for {limit} seconds")
             await asyncio.sleep(limit)
+            self.logger.info(f"finished")
             return #FIXME
         else:
             await sdn.notify(status="Running", ready=1)
+            self.logger.info('notified systemd: READY')
         await run
 
     async def test(self, limit:float) -> None:

@@ -3,7 +3,7 @@ from .inputs  import InputProxyL2, ValueExpressionRet, InputValueGroups, InputTr
 from .metrics import Table, Device, MetricMetaData, ValueExpression
 from typing import Iterator, Callable, IO, cast
 from types  import TracebackType
-import aiohttp, zlib, time, sys, re
+import aiohttp, zlib, time, sys, re, logging
 
 def prom_id(s:str) -> str: #  {{{
     assert re.match(r'^[-_a-zA-Z][-_a-zA-Z0-9]*$', s)
@@ -237,6 +237,8 @@ class StdIoSessionManager: # {{{
 
 class SenderError(Exception): pass
 
+senderlogger = logging.getLogger('send')
+
 class Sender: # {{{
     def __init__(self, parent:'Renderer', session:aiohttp.ClientSession|StdioSession) -> None:
         self.session = session
@@ -245,23 +247,36 @@ class Sender: # {{{
         self.encoder = parent.encoder
 
     async def send(self, data:bytes) -> None:
-        rv = await self.session.post(self.url, data=self.encoder(data))
+        encoded = self.encoder(data)
+        senderlogger.log(7, f"{self}({self.url}) post ({len(data)}/{len(encoded)})")
+        rv = await self.session.post(self.url, data=encoded)
         if rv.status in (200,204):
-            await rv.read() # Body should be small, we should consume it, to allow pipelining.
+            senderlogger.info(f"{self}({self.url}) post result: {rv.status}")
+            for k, v in rv.headers.items():
+                senderlogger.log(7, f"> {k}: {v}")
+            body = await rv.read() # Body should be small, we should consume it, to allow pipelining.
+            senderlogger.log(7, f"body: {body!r}")
             return
 
+        senderlogger.error(f"{self}({self.url}) post result: {rv.status}")
         msg = f"Invalid response ({rv.status})\n"
         try:
             for k, v in rv.headers.items():
+                senderlogger.warning(f"> {k}: {v}")
                 msg += f"> {k}: {v}\n"
-            msg += "> " + await rv.text()
+            text = await rv.text()
+            senderlogger.warning(f"body: {text}")
+            msg += "> " + text
         except Exception as e:
             msg += f"Failed to parse invalid response headers: {e}\n"
         raise SenderError(msg)
 
     async def render_and_send(self, st:ScrapedTables) -> None:
+        senderlogger.debug(f"{self}({self.url}) render_and_send: render")
         data = self.render(st)
-        return await self.send(data)
+        senderlogger.debug(f"{self}({self.url}) render_and_send: send")
+        await self.send(data)
+        senderlogger.debug(f"{self}({self.url}) render_and_send: send done")
 # }}}
 
 class Renderer: # {{{
