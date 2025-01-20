@@ -299,7 +299,7 @@ class OutputRunner:
                     self.counter_err += 1
 
     def spawn(self) -> None:
-        outputlogger.error(f"{self} spawn")
+        outputlogger.info(f"{self} spawn")
         self.task = asyncio.create_task(self.run()) # FIXME not awaited?
 
 executorlogger = logging.getLogger("executor")
