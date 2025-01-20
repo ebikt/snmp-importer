@@ -6,10 +6,12 @@ import re
 import asyncio
 import math
 import time
+import logging
 
 from bisect import bisect
 from typing import TypeVar, Generic, Callable
 
+schedlogger = logging.getLogger('scheduler')
 # {{{ Generic schedule
 
 def parse_hms(timestr:str, excfactory:YamlValue) -> int:
@@ -47,12 +49,14 @@ class SchedPrimitive:
 T=TypeVar('T')
 class SchedTable(Generic[T]):
     def __init__(self, _:type[T]) -> None:
+        schedlogger.log(19, f"{self} new")
         self.table: dict[int,list[T]] = {}
         self.period = 1
         self.stop_event = asyncio.Event()
         self.stop_event.clear()
 
     def add(self, when:SchedPrimitive, *what:T) -> None:
+        schedlogger.info(f"{self} add {when}, {what}")
         if self.period % when.period:
             period = when.period * self.period // math.gcd(when.period, self.period)
             assert period % when.period == 0 and period % self.period == 0
@@ -71,12 +75,15 @@ class SchedTable(Generic[T]):
         """
             Calls callback([job, job, job, ...]) for all jobs that should be triggered at that time.
         """
+        schedlogger.log(21, f"{self} run, lastevent: {now}, period: {self.period}")
         schedule = sorted(self.table.items())
         period = self.period
         now_start, now_offset = divmod(now, period)
         now_start *= period
         pos    = bisect(schedule, (now_offset,))
         next_t = now
+        for event_offset, event_data in schedule:
+            schedlogger.log(21, f"{self}    table: offset:{event_offset:5d} tasks:{event_data}")
         while not self.stop_event.is_set():
             if pos >= len(schedule):
                 pos = 0
@@ -84,6 +91,7 @@ class SchedTable(Generic[T]):
             event_offset, event_data = schedule[pos]
             next_t = now_start + event_offset
             now = time.time()
+            schedlogger.log(21, f"{self} pos: {pos}, next_t: {next_t}, wait for {next_t - now}")
             if now < next_t:
                 try:
                     await asyncio.wait_for(self.stop_event.wait(), next_t - now)
@@ -91,13 +99,17 @@ class SchedTable(Generic[T]):
                     pass
                 else:
                     break
+            schedlogger.log(21, f"{self} callback {event_data}")
             callback(event_data.copy())
             pos += 1
         if next_t < self.stop_time:
+            schedlogger.log(21, f"{self} return A: {next_t}")
             return next_t
         elif now <= self.stop_time:
+            schedlogger.log(21, f"{self} return B: {self.stop_time}")
             return self.stop_time
         else:
+            schedlogger.log(21, f"{self} return C: {now + 0.0001}")
             return now + 0.0001
 
 # }}}
