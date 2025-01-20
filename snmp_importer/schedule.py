@@ -1,5 +1,5 @@
 from .config  import YamlValue
-from .walker  import Auth, Target
+from .walker  import Auth
 from .metrics import Devices, Device
 
 import re

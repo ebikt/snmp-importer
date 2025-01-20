@@ -252,7 +252,7 @@ class Target: # {{{
                             raise ErrorIndication(repr(errorStatus))
                         return result
                 except TimeoutError:
-                    snmplogger.log(7,f"{self} {command} timeout, retries: {retries}")
+                    snmplogger.log(7,f"{self} {self.host}:{self.port} {command} timeout, retries: {retries}")
                     retries -= 1
                 else:
                     assert False, "never happens"
@@ -454,4 +454,7 @@ class Walker: # {{{
         snmplogger.log(4,f"{self}: ({self.target.host}:{self.target.port}) walk end")
         return vectors
     # }}}
+
+    def close(self) -> None:
+        self.target.close()
 # }}}

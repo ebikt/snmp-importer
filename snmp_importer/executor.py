@@ -152,25 +152,32 @@ class SingleTargetScraper(TaskDefinition):
 
     async def run(self) -> bool:
         tasklogger.debug(f"{self} run start")
-        walker = Walker(
-            Target(self.job.auth, self.job.path[0], path = self.job.path),
-            bulkEnabled    = False,
-            walkBulkWidth  = 1,
-            getBulkLength  = 25,
-            walkBulkLength = 25,
-        )
-        device = ScrapedDevice(self.job.host_id, walker, self.job.device, self.inputs)
-        start = time.time()
-        tasklogger.debug(f"{self} scrape")
-        tables = await device.scrape()
-        tasklogger.debug(f"{self} scraped")
-        tables.set_when(start)
-        for que in self.outputs:
+        target = Target(self.job.auth, self.job.path[0], path = self.job.path),
+        try:
+            walker = Walker(
+                target = target,
+                bulkEnabled    = False,
+                walkBulkWidth  = 1,
+                getBulkLength  = 25,
+                walkBulkLength = 25,
+            )
+            device = ScrapedDevice(self.job.host_id, walker, self.job.device, self.inputs)
+            start = time.time()
+            tasklogger.debug(f"{self} scrape")
+            tables = await device.scrape()
+            tasklogger.debug(f"{self} scraped")
+            tables.set_when(start)
+            for que in self.outputs:
+                try:
+                    que.put_nowait(tables)
+                    tasklogger.debug(f"{self} scrape result queued")
+                except Exception:
+                    tasklogger.critical("Internal error: cannot append into queue {que}")
+        finally:
             try:
-                que.put_nowait(tables)
-                tasklogger.debug(f"{self} scrape result queued")
+                walker.close()
             except Exception:
-                tasklogger.critical("Internal error: cannot append into queue {que}")
+                pass
         return True
 # }}}
 
