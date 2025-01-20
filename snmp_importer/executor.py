@@ -71,7 +71,7 @@ class NonParallelTask(Generic[T]):
                     ok = await task.run()
                 except Exception as e:
                     ok = False
-                    tasklogger.error(f"{self} got exception {type(e).__name__}: {e!r}")
+                    tasklogger.error(f"{self} got exception {type(e).__name__}: {e!r}", exc_info=True)
                 tasklogger.debug(f"{self} finished: {task}, got: {ok}")
                 if ok:
                     self.counter_ok += 1
@@ -79,7 +79,7 @@ class NonParallelTask(Generic[T]):
                     self.counter_err += 1
             tasklogger.debug(f"{self} loop finished")
         except Exception as e:
-            tasklogger.critical(f"{self} loop exception {e}")
+            tasklogger.critical(f"{self} loop exception {e}", exc_info=True)
             raise
         finally:
             self.running = False
@@ -152,7 +152,7 @@ class SingleTargetScraper(TaskDefinition):
 
     async def run(self) -> bool:
         tasklogger.debug(f"{self} run start")
-        target = Target(self.job.auth, self.job.path[0], path = self.job.path),
+        target = Target(self.job.auth, self.job.path[0], path = self.job.path)
         try:
             walker = Walker(
                 target = target,
@@ -295,7 +295,7 @@ class OutputRunner:
                     outputlogger.debug(f"{self}: sent")
                     self.counter_ok += 1
                 except Exception as e:
-                    outputlogger.error(f"{self} Cannot sent output {sts}: {e}")
+                    outputlogger.error(f"{self} Cannot send output {sts}: {e}", exc_info=True)
                     self.counter_err += 1
 
     def spawn(self) -> None:
