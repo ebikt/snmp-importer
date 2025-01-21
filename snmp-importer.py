@@ -78,7 +78,7 @@ class Args:
                 help='Schedule configuration.')]
     outputs:     Annotated[str,      '-o', dict(default='@/outputs.yml',
                 help='Output configuration.')]
-    test:        Annotated[str|None, '-T', dict(default=None, metavar='TABLE/ADDRESS/AUTH',
+    test:        Annotated[str|None, '-T', dict(default=None, metavar='TABLE/ADDRESS/AUTH[,retries=CNT][,timeout=SECONDS]',
                 help='run single scrape of table set TABLE on address ADDRESS using auth AUTH')]
     test_influx: Annotated[bool,     '-I', dict(default=False, action='store_true',
                 help='Use colored stdout influx writer as output.')]
@@ -153,15 +153,23 @@ class Args:
                 assert len(taa) >= 3
                 tbl = taa[0]
                 addr = '/'.join(taa[1:-1])
-                auth = taa[-1]
+                auth_params = taa[-1].split(',')
             except Exception:
-                print("--test expects TABLE/ADDRESS/AUTH", file=sys.stderr)
+                print("--test expects TABLE/ADDRESS/AUTH[,timeout=FLOAT][,retries=INT]", file=sys.stderr)
                 sys.exit(1)
-            ret['schedule_path'] = YamlValue( [{
+            schedcfg:dict[str, object] = {
                 'devices':  {"CMDLINE":addr},
-                'auth':     auth,
+                'auth':     auth_params[0],
                 'schedule': {tbl:"00:01+00:00"},
-            }], '--test')
+            }
+            try:
+                for param in auth_params[1:]:
+                    paramkey, paramvalue = param.split('=')
+                    assert paramkey in ('timeout', 'retries',)
+                    schedcfg[f"snmp_{paramkey}"] = paramvalue
+            except Exception:
+                print("--test invalid snmp option, supported are only timeout=FLOAT or retries=INT")
+            ret['schedule_path'] = YamlValue( [schedcfg], '--test')
         for attr in {'inputs', 'tables', 'auths', 'schedule', 'outputs'}:
             out_attr = attr[:-1] if attr[-1] == 's' else attr
             out_attr += '_path'

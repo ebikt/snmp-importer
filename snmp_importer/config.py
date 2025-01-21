@@ -88,6 +88,28 @@ class YamlValue(YamlFileInfoValue): # {{{
         return i
     # }}}
 
+    def asFloat(self, strict:bool=False, default:float|None = None, min:float|None = None, max:float|None = None) -> float: # {{{
+        data = self.data
+        if data is None or self.isMissing():
+            if default is None:
+                self.raiseExc("Missing mandatory integer value.")
+            else:
+                return default
+        if isinstance(data, float):
+            i = data
+        elif isinstance(data, int):
+            i = float(data)
+        elif not strict and isinstance(data, (str, bool)):
+            i = float(data)
+        else:
+            self.raiseExc("Expected float type.")
+        if min is not None and i < min:
+            self.raiseExc(f"Value must ≥ {min}")
+        if max is not None and i > max:
+            self.raiseExc(f"Value must ≤ {max}")
+        return i
+    # }}}
+
     def asBool(self, strict:bool=False, default:bool|None = None) -> bool: # {{{
         data = self.data
         if data is None or data == '' or self.isMissing():

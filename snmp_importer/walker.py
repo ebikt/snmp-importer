@@ -157,7 +157,7 @@ class Target: # {{{
             port:int|None = None,
             path:list[str]|None = None,
             engine: SnmpTransportType|None = None,
-            timeout: int = 2,
+            timeout: float = 2.0,
             retries: int = 3,
             ipv6: bool|None = None,
             tcp:  bool = False,

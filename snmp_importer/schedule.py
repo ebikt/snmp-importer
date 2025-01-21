@@ -120,12 +120,14 @@ class SchedTable(Generic[T]):
 # {{{ Scraping schedule
 
 class ScrapeJob:
-    def __init__(self, host_id:str, definition_id:str, auth_id:str, path:list[str], device:Device, auth:Auth) -> None:
+    def __init__(self, host_id:str, definition_id:str, auth_id:str, path:list[str], device:Device, auth:Auth, snmp_timeout: float, snmp_retries:int) -> None:
         self.host_id = host_id
         self.job_id    = (host_id, definition_id, auth_id)
         self.device    = device
         self.auth      = auth
         self.path      = path
+        self.snmp_timeout   = snmp_timeout
+        self.snmp_retries   = snmp_retries
 
 class ScrapeSchedule(SchedTable[ScrapeJob]):
     def __init__(self, cfg:YamlValue, devices: Devices, auths:dict[str, Auth]) -> None:
@@ -151,12 +153,15 @@ class ScrapeSchedule(SchedTable[ScrapeJob]):
                 if len(static_paths) == 0:
                     continue
 
+                timeout = s['snmp_timeout'].asFloat(default=2.0, min=0.01, max=600.0)
+                retries = s['snmp_retries'].asInt(  default=3,   min=1,    max=50)
+
                 for definition, timelinecfg in s['schedule'].iterStrMap(allow_missing=True):
                     if definition not in devices.devices:
                         timelinecfg.raiseExc(f"Unknown device definition {definition}")
                     jobs = [
                         ScrapeJob(hostname, definition, authname,
-                                  path, devices.devices[definition], auth)
+                                  path, devices.devices[definition], auth, timeout, retries)
                         for hostname, path in static_paths.items() ]
                     self.add(SchedPrimitive(timelinecfg), *jobs)
                     self.job_ids |= set( job.job_id for job in jobs )

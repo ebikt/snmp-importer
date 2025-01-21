@@ -152,7 +152,7 @@ class SingleTargetScraper(TaskDefinition):
 
     async def run(self) -> bool:
         tasklogger.debug(f"{self} run start")
-        target = Target(self.job.auth, self.job.path[0], path = self.job.path)
+        target = Target(self.job.auth, self.job.path[0], path = self.job.path, timeout = self.job.snmp_timeout, retries = self.job.snmp_retries)
         try:
             walker = Walker(
                 target = target,
