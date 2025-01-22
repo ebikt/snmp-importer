@@ -45,6 +45,17 @@ alias:
   # https://mibs.observium.org/mib/HH3C-LSW-DEV-ADM-MIB/
   hh3cLswSlot: hh3c.8.35.18.4.3.1
 
+  h3cCommon:   enterprises.2011.10
+  # https://mibs.observium.org/mib/H3C-ENTITY-EXT-MIB/
+  h3cPhys:     h3cCommon.2.6.1.1.1.1
+  h3cPhyManu:  h3cCommon.2.6.1.2.1.1
+
+  a3comHuawei: enterprises.43.45.1
+  ah3cCommon:  a3comHuawei.10
+  # https://mibs.observium.org/mib/A3COM-HUAWEI-OID-MIB/
+  ah3cPhys:    ah3cCommon.2.6.1.1.1.1
+  ah3cPhyManu: ah3cCommon.2.6.1.2.1.1
+
   # https://mibs.observium.org/mib/RAPID-CITY/
   rapidCity:   enterprises.2272
   rcPort:      rapidCity.1.4.10.1.1
@@ -61,6 +72,10 @@ input:
     name:              system.5
     location:          system.6
     services:          system.7
+
+    hh3cClock:    hh3c.2.3.1.1.1
+    h3cClock:     h3cCommon.2.3.1.1.1
+    huaweiClock:  a3comHuawei.5.25.19.1.1.1
 
   ifaces:
     index:             if.1
@@ -198,6 +213,81 @@ input:
     disp_unit:         sensors.6
     timestamp:         sensors.7
     updaterate:        sensors.8
+
+  ah3cPhys:
+    admin_status:      ah3cPhys.2
+    oper_status:       ah3cPhys.3
+    standby_status:    ah3cPhys.4
+    alarm_light:       ah3cPhys.5
+    cpu_perc:          ah3cPhys.6
+    cpu_perc_thresh:   ah3cPhys.7
+    mem_perc:          ah3cPhys.8
+    mem_perc_thresh:   ah3cPhys.9
+    mem_size:          ah3cPhys.10
+    uptime:            ah3cPhys.11
+    temperature:       ah3cPhys.12
+    temp_thresh:       ah3cPhys.13
+    voltage:           ah3cPhys.14
+    volt_low:          ah3cPhys.15
+    volt_high:         ah3cPhys.16
+    temp_crit:         ah3cPhys.17
+    mac:               ah3cPhys.18 | mac
+    error_status:      ah3cPhys.19
+    cpu_max:           ah3cPhys.20
+    temp_low:          ah3cPhys.21
+    temp_shut:         ah3cPhys.22
+    mem_size:          ah3cPhys.23
+    cpu_freq:          ah3cPhys.24
+    first_used:        ah3cPhys.25
+    cpu_avg:           ah3cPhys.26
+    mem_avg:           ah3cPhys.27
+    mem_type:          ah3cPhys.28
+    temp_low_crit:     ah3cPhys.29
+    temp_low_shut:     ah3cPhys.30
+
+    serial:            ah3cPhyManu.2
+    build_info:        ah3cPhyManu.3
+    bom_code:          ah3cPhyManu.4
+    address_count:     ah3cPhyManu.5
+
+  h3cPhys:
+    admin_status:      h3cPhys.2
+    oper_status:       h3cPhys.3
+    standby_status:    h3cPhys.4
+    alarm_light:       h3cPhys.5
+    cpu_perc:          h3cPhys.6
+    cpu_perc_thresh:   h3cPhys.7
+    mem_perc:          h3cPhys.8
+    mem_perc_thresh:   h3cPhys.9
+    mem_size:          h3cPhys.10
+    uptime:            h3cPhys.11
+    temperature:       h3cPhys.12
+    temp_thresh:       h3cPhys.13
+    voltage:           h3cPhys.14
+    volt_low:          h3cPhys.15
+    volt_high:         h3cPhys.16
+    temp_crit:         h3cPhys.17
+    mac:               h3cPhys.18 | mac
+    error_status:      h3cPhys.19
+    cpu_max:           h3cPhys.20
+    temp_low:          h3cPhys.21
+    temp_shut:         h3cPhys.22
+    mem_size:          h3cPhys.23
+    cpu_freq:          h3cPhys.24
+    first_used:        h3cPhys.25
+    cpu_avg:           h3cPhys.26
+    mem_avg:           h3cPhys.27
+    mem_type:          h3cPhys.28
+    temp_low_crit:     h3cPhys.29
+    temp_low_shut:     h3cPhys.30
+    mem_size_rev:      h3cPhys.32
+    cpu_1min:          h3cPhys.33
+    cpu_5min:          h3cPhys.34
+
+    serial:            h3cPhyManu.2
+    build_info:        h3cPhyManu.3
+    bom_code:          h3cPhyManu.4
+    address_count:     h3cPhyManu.5
 
   hh3cPhys:
     admin_status:      hh3cPhys.2

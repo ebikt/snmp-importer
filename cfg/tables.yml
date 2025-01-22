@@ -119,7 +119,89 @@ lldp:
           suffix: ''
           help: "Observed remote LLDP information"
 
+ah3c_components:
+  tables:
+    snmp_components:
+      dimensions:
+        descr:  physical.description
+        class:  physical.class
+        name:   physical.name
+        hw_rev: physical.hw_rev
+        fw_rev: physical.fw_rev
+        sw_rev: physical.sw_rev
+        model:  physical.model
+        mac:    ah3cPhys.mac
+        serial: ah3cPhys.serial
+
+      labels:
+        admin_status: ah3cPhys.admin_status
+        oper_status:  ah3cPhys.oper_status
+
+      metrics:
+        - expr: 'ah3cPhys.admin_status * 10 + ah3cPhys.oper_status'
+          suffix: ''
+          type: gauge
+          help: Component status
+
+        - loop:
+            res: [ cpu, mem ]
+          expr: ah3cPhys.${res}_perc
+          suffix: ${res}
+          type: gauge
+          help: ${res} usage percent
+
+        - expr: ah3cPhys.temperature
+          suffix: temp
+          type: gauge
+          help: temperature (celsius)
+
+        - expr: ah3cPhys.uptime
+          suffix: uptime
+          type: gauge
+          help: uptime (seconds)
+
 h3c_components:
+  tables:
+    snmp_components:
+      dimensions:
+        descr:  physical.description
+        class:  physical.class
+        name:   physical.name
+        hw_rev: physical.hw_rev
+        fw_rev: physical.fw_rev
+        sw_rev: physical.sw_rev
+        model:  physical.model
+        mac:    h3cPhys.mac
+        serial: h3cPhys.serial
+
+      labels:
+        admin_status: h3cPhys.admin_status
+        oper_status:  h3cPhys.oper_status
+
+      metrics:
+        - expr: 'h3cPhys.admin_status * 10 + hh3cPhys.oper_status'
+          suffix: ''
+          type: gauge
+          help: Component status
+
+        - loop:
+            res: [ cpu, mem ]
+          expr: h3cPhys.${res}_perc
+          suffix: ${res}
+          type: gauge
+          help: ${res} usage percent
+
+        - expr: h3cPhys.temperature
+          suffix: temp
+          type: gauge
+          help: temperature (celsius)
+
+        - expr: h3cPhys.uptime
+          suffix: uptime
+          type: gauge
+          help: uptime (seconds)
+
+hh3c_components:
   tables:
     snmp_components:
       dimensions:
@@ -644,18 +726,30 @@ basic:
     - sysinfo_short
     - ifaces64
 
-h3c_5120:
+h3c_3100:
   include:
     - sysinfo_short
     - ifaces64
     - h3c_components
+
+h3c_4210:
+  include:
+    - sysinfo_short
+    - ifaces64
+    - ah3c_components
+
+h3c_5120:
+  include:
+    - sysinfo_short
+    - ifaces64
+    - hh3c_components
     # - lldp
 
 h3c_9500:
   include:
     - sysinfo_short
     - h3c_ifaces_txr
-    - h3c_components
+    - hh3c_components
     - h3c_lsw_9500
 #    - h3c_acl
 #    - lldp
