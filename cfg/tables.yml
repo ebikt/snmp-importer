@@ -179,7 +179,7 @@ h3c_components:
         oper_status:  h3cPhys.oper_status
 
       metrics:
-        - expr: 'h3cPhys.admin_status * 10 + hh3cPhys.oper_status'
+        - expr: 'h3cPhys.admin_status * 10 + h3cPhys.oper_status'
           suffix: ''
           type: gauge
           help: Component status
