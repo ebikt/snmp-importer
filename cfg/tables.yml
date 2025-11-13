@@ -720,6 +720,159 @@ voss_ifaces:
         - rcOptical.volt_100uV
         - rcOptical.bias_100nA
 
+asyncos_hw:
+  tables:
+    asyncos_psu:
+      metrics:
+        - expr:   asyncOs.psu_status
+          suffix:    status
+          type:      gauge
+          help:      'N/A: 1, Healthy: 2, No AC: 3, Fault: 4'
+        - expr:   asyncOs.psu_redun
+          suffix:    redundant
+          type:      gauge
+          help:      'OK: 1, Degraded: 2'
+      dimensions:
+        name: asyncOs.psu_name
+      scrape: []
+    asyncos_temp:
+      dimensions:
+        name: asyncOs.temp_name
+      metrics:
+        - expr:   asyncOs.temp_cels
+          suffix:    ''
+          influx:    temperature
+          type:      gauge
+          help:      'Temperature in Celsius'
+    asyncos_fan:
+      dimensions:
+        name: asyncOs.fan_name
+      metrics:
+        - expr:   asyncOs.fan_rpms
+          suffix:    ''
+          influx:    rpms
+          type:      gauge
+          help:      'Temperature in Celsius'
+    asyncos_raid:
+      dimensions:
+        name: asyncOs.raid_name
+      labels:
+        last_err: asyncOs.raid_last_err
+      metrics:
+        - expr:   asyncOs.raid_status
+          suffix:    ''
+          influx:    status
+          type:      gauge
+          help:      'Healthy: 1, Failure: 2, Rebuild: 3'
+
+asyncos_util:
+  tables:
+    asyncos:
+      scalar: yes
+      transform: |
+        UNITS = {'B':1, 'kB':1<<10, 'KB': 1<<10,
+                 'MB':1<<20, 'GB':1<<30, 'TB': 1<<40, 'PB': 1<<50}
+        class Transform:
+          def __init__(self, inputs):
+            d = {}
+            for kv in inputs.asyncOs.disk_util_txt.split(','):
+              if ': ' not in kv: continue
+              k, v = kv.rsplit(': ',1)
+              k = k.strip()
+              v = v.strip()
+              if k.endswith(' in %'):
+                  k = k[:-5] + '_perc'
+                  v = float(v)
+              else:
+                try:
+                  v, u = v.split()
+                  v = float(v) * UNITS[u]
+                except Exception:
+                  continue
+              if k.isidentifier():
+                setattr(self, k, v)
+      metrics:
+        - expr: asyncOs.mem_util
+          suffix: mem
+          type: gauge
+          help: Memory % used
+        - expr: asyncOs.cpu_util
+          suffix: cpu_5s
+          type: gauge
+          help: cpu % util for last 5 seconds
+        - expr: asyncOs.io_util
+          suffix: diskio_10s
+          type: gauge
+          help: disk io % util for last 5-15 seconds
+        - expr: asyncOs.queue_perc
+          suffix: queue_util
+          type: gauge
+          help: Queue % used
+        - expr: asyncOs.queue_avail
+          suffix: queue_status
+          type: gauge
+          help: "Available: 1, Shortage: 2, Full: 3"
+        - expr: asyncOs.conserv_reason
+          suffix: conservation
+          type: gauge
+          help: "None: 1, Memory shortage: 2, Queue space shortage: 3, Queue full: 4"
+        - expr: asyncOs.mem_avail_status
+          suffix: mem_status
+          type: gauge
+          help: "Available: 1, Shortage: 2, Full: 3"
+        - expr: asyncOs.oldest_message
+          suffix: oldest_msg_s
+          type: gauge
+          help: Number of seconds the oldest message has been in queue.
+        - expr: asyncOs.work_queue_msgs
+          suffix: queue_messages
+          type: gauge
+          help: "Number of messages in the work queue."
+        - expr: asyncOs.dns_outstanding
+          suffix: dns_noreply
+          type: gauge
+          help: "Number of DNS requests with no reply until now."
+        - expr: asyncOs.dns_pending
+          suffix: dns_pending
+          type: gauge
+          help: "Number of DNS requests waiting to be sent."
+        - expr: asyncOs.cpu_load
+          suffix: cpu_load
+          type: gauge
+          help: "Number of processess in ready queue for CPU (percent?)"
+        - expr: transform.Total_disk_space
+          suffix: disk_total
+          type: gauge
+          help: "Approximate size of disk"
+        - expr: transform.Available_disk_space
+          suffix: disk_avail
+          type: gauge
+          help: "Approximate available free disk space"
+        - expr: transform.Used_disk_space
+          suffix: disk_used
+          type: gauge
+          help: "Approximate used disk space"
+        - expr: transform.Used_disk_space_perc
+          suffix: disk_perc
+          type: gauge
+          help: "Approximate used disk space in %"
+      labels:
+          disk_util: asyncOs.disk_util_txt
+      scrape: [ asyncOs.disk_util_txt ]
+    asyncos_updates:
+      dimensions:
+        name: asyncOs.update_name
+      metrics:
+        - expr: asyncOs.update_count
+          suffix: ''
+          influx: count
+          type: counter
+          help: Number of successful update attempts.
+        - expr: asyncOs.update_fails
+          suffix: failures
+          type: counter
+          help: Number of unsuccessful update attempts.
+
 # table collections
 basic:
   include:
