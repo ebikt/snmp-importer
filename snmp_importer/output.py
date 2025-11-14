@@ -73,7 +73,7 @@ class ScrapedTableRow: # {{{
                     if m.influx:
                         self.influx_val[m.influx]=value
 
-    def get_prom_metrics(self) -> Iterator[tuple[str, float|int, dict[str,str]]]:
+    def get_prom_metrics(self) -> 'Iterator[tuple[str, float|int, dict[str,str]]]':
         root_labels = {}
         iid = str(self.iid)
         for ldict in self.labels_val, self.labels_dim:
@@ -124,7 +124,7 @@ class ScrapedTables: # {{{
         "snmp_importer_stats":  ("gauge", "Timers for scraping device"),
     }
 
-    def get_prom_scrape_metrics(self, render_start:float) -> Iterator[tuple[float|int, dict[str,str]]]:
+    def get_prom_scrape_metrics(self, render_start:float) -> 'Iterator[tuple[float|int, dict[str,str]]]':
         yield self.errors.count,{"__name__":"snmp_importer_errors"}
         assert 'render' not in self.times
         for timer, timeval in self.times.items():
@@ -240,7 +240,7 @@ class SenderError(Exception): pass
 senderlogger = logging.getLogger('send')
 
 class Sender: # {{{
-    def __init__(self, parent:'Renderer', session:aiohttp.ClientSession|StdioSession) -> None:
+    def __init__(self, parent:'Renderer', session:'aiohttp.ClientSession|StdioSession') -> None:
         self.session = session
         self.url     = parent.dest_url
         self.render  = parent.render
@@ -286,7 +286,7 @@ class Renderer: # {{{
     def _identity(data:bytes) -> bytes: return data
 
     @staticmethod
-    def get_gzip(gzip:int = -1) -> tuple[str, Callable[[bytes],bytes]]|None:
+    def get_gzip(gzip:int = -1) -> 'tuple[str, Callable[[bytes],bytes]]|None':
         if gzip > 0:
             def compressor(data:bytes) -> bytes:
                 return zlib.compress(data, level=gzip, wbits=31)  # 25<=wbits<=31, for gzip compatibility, see documentation
@@ -294,7 +294,7 @@ class Renderer: # {{{
         else:
             return None
 
-    def __init__(self, dest_url:str = '', colors:bool=False, encoding:tuple[str, Callable[[bytes],bytes]]|None = None):
+    def __init__(self, dest_url:str = '', colors:bool=False, encoding:'tuple[str, Callable[[bytes],bytes]]|None' = None):
         self.dest_url = dest_url
         self.headers = self.headers.copy()
         if colors:
@@ -315,7 +315,7 @@ class Renderer: # {{{
 
     def render(self, st:ScrapedTables) -> bytes: raise NotImplementedError("abstract method")
 
-    session_manager: aiohttp.ClientSession|StdIoSessionManager
+    session_manager: 'aiohttp.ClientSession|StdIoSessionManager'
     async def __aenter__(self) -> Sender:
         if self.dest_url.startswith('http'):
             self.session_manager = aiohttp.ClientSession(headers=self.headers)

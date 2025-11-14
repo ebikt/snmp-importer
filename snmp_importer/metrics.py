@@ -2,19 +2,21 @@ from .config import YamlValue, ConfigError
 from .walker import SnmpValue, Integer, OctetString
 from .inputs import Inputs, ValueExpressionRet, InputProxyL2, InputTransformation
 import re, math
-from typing import cast, Iterator, Mapping, Self, Callable
+from typing import cast, Iterator, Mapping, Callable, TYPE_CHECKING
 from types import CodeType
 import itertools
+if TYPE_CHECKING:
+    from typing import Self
 
 class InputValueGroup: # FIXME
-    def __getitem__(self, key:str) -> ValueExpressionRet|None:
+    def __getitem__(self, key:str) -> 'ValueExpressionRet|None':
         raise NotImplementedError()
 
-    def get(self, key:str, default:str) -> ValueExpressionRet|None:
+    def get(self, key:str, default:str) -> 'ValueExpressionRet|None':
         raise NotImplementedError()
 
 class ValueExpression: # {{{
-    metric: tuple[str,str]|None
+    metric: 'tuple[str,str]|None'
     fileInfo: str
     expression: str
     code: CodeType
@@ -29,10 +31,10 @@ class ValueExpression: # {{{
             self.metric = None
             self.code = compile(self.expression, self.fileInfo, 'eval')
 
-    def getValue(self, locals:InputProxyL2, numeric:bool=False) -> ValueExpressionRet|None:
+    def getValue(self, locals:InputProxyL2, numeric:bool=False) -> 'ValueExpressionRet|None':
         try:
             if self.metric is None:
-                ret = cast(ValueExpressionRet|None, eval(self.code, cast(dict[str,None],{'re':re, 'math':math}), cast(Mapping[str,object],locals)))
+                ret = cast('ValueExpressionRet|None', eval(self.code, cast(dict[str,None],{'re':re, 'math':math}), cast(Mapping[str,object],locals)))
             elif self.metric[0] == 'transform':
                 ret = getattr(locals[self.metric[0]],self.metric[1])
             else:
@@ -93,7 +95,7 @@ class MetricVariants: # {{{
     variants:list[Metric]
 
     _varsub = re.compile(r'\$\{\s*([A-Za-z0-9][-_A-Za-z0-9]*)\s*\}')
-    def _label_expand(self, labels:dict[str,str], scfg:YamlValue, default:str|None = None, nonempty:bool=False) -> str:
+    def _label_expand(self, labels:dict[str,str], scfg:YamlValue, default:'str|None' = None, nonempty:bool=False) -> str:
         if scfg.isMissing():
             if default is None or nonempty:
                 scfg.raiseExc(f"Value must be nonempty string")
@@ -129,9 +131,9 @@ class Table: # {{{
     labels:dict[str, ValueExpression]
     dimensions:dict[str, ValueExpression]
     scrape:dict[tuple[str,str], str]
-    max_rows:int|None
+    max_rows:'int|None'
     scalar:bool
-    transformation:TransformationCode|None = None
+    transformation:'TransformationCode|None' = None
 
     def __init__(self, name:str, cfg:YamlValue, inputs:Inputs) -> None: # {{{
         self.name = name
@@ -178,7 +180,7 @@ class Table: # {{{
                 self.scalar = False
     # }}}
 
-    def merge(self, other:'Table') -> Self: # {{{
+    def merge(self, other:'Table') -> 'Self': # {{{
         self.metrics = other.metrics + self.metrics
         for lname, dimension in other.dimensions.items():
             assert lname not in self.dimensions, "Duplicate dimension {lname}, defined in  {dimension.fileInfo} and {self.dimensions[dimension].fileInfo}"

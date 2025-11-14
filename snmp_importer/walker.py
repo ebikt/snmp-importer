@@ -3,6 +3,7 @@ import socket
 import logging
 MYPY = False
 
+from typing import Union
 
 if MYPY:
     from typing import overload, Self, Iterator, Literal
@@ -109,15 +110,18 @@ else:
     from pysnmp.smi.rfc1902   import ObjectType,ObjectIdentity
     from pysnmp.proto.rfc1905 import EndOfMibView, NoSuchInstance, NoSuchObject
     import pysnmp.hlapi.transport
-    import pycares
+    try:
+        import pycares
+    except ImportError:
+        pass
     import pysnmp.hlapi.v3arch.asyncio as snmp3
 
-    SnmpAuthType = snmp3.CommunityData|snmp3.UsmUserData
+    SnmpAuthType = 'snmp3.CommunityData|snmp3.UsmUserData'
     SnmpDispatcherType = snmp3.SnmpEngine
     SnmpTransportType = pysnmp.hlapi.transport.AbstractTransportTarget
 
 #FIXME: add here more as needed
-SnmpValue = Integer|TimeTicks|OctetString|ObjectName
+SnmpValue = Union[Integer,TimeTicks,OctetString,ObjectName]
 
 from typing import Iterable, Callable, NoReturn, Generic, TypeVar
 from types import TracebackType
@@ -126,10 +130,10 @@ from .config import YamlValue, ConfigError
 
 snmplogger = logging.getLogger('snmp')
 
-def parse_address(address:str) -> tuple[str, int|None]: # {{{
+def parse_address(address:str) -> 'tuple[str, int|None]': # {{{
     if ':' not in address:
         parsed_host = address
-        parsed_port:str|None = None
+        parsed_port:'str|None' = None
     else:
         parsed_host, parsed_port = address.rsplit(':',-1)
         if not parsed_port.isnumeric() or min( c in ':0123456789abcdefABCDEF' for c in parsed_host):
@@ -145,7 +149,7 @@ class Target: # {{{
     auth:      SnmpAuthType
     host: str
     port: int
-    ipv6: bool | None
+    ipv6: 'bool | None'
     transport: SnmpTransportType
     tcp     = False
     timeout = 3.3
@@ -154,12 +158,12 @@ class Target: # {{{
     def __init__(self,
             auth:'Auth',
             host:str,
-            port:int|None = None,
-            path:list[str]|None = None,
-            engine: SnmpTransportType|None = None,
+            port:'int|None' = None,
+            path:'list[str]|None' = None,
+            engine: 'SnmpTransportType|None' = None,
             timeout: float = 2.0,
             retries: int = 3,
-            ipv6: bool|None = None,
+            ipv6: 'bool|None' = None,
             tcp:  bool = False,
         ) -> None:
         self.host, parsed_port = parse_address(host)
@@ -179,7 +183,7 @@ class Target: # {{{
                 self.engine = engine
         snmplogger.log(5, f"{self}: {self.host}:{self.port} {path} self.engine (ipv6:{self.ipv6}, tcp:{self.tcp})")
 
-    _FAMILIES:dict[bool|None,int] = {
+    _FAMILIES:'dict[bool|None,int]' = {
         True:socket.AF_INET6,
         False:socket.AF_INET,
         None:0
@@ -258,21 +262,21 @@ class Target: # {{{
                     assert False, "never happens"
             raise requestTimedOut
 
-        async def getCmd(self, oids: Iterable[ObjectName|str]) -> list[tuple[ObjectName, SnmpValue]]:
+        async def getCmd(self, oids: 'Iterable[ObjectName|str]') -> list[tuple[ObjectName, SnmpValue]]:
             varBinds = await self.prepare(oids)
             return await self.wrapCmd(
                 varBinds,
                 snmp3.getCmd,
             )
 
-        async def nextCmd(self, oids: Iterable[ObjectName|str]) -> list[list[tuple[ObjectName, SnmpValue]]]:
+        async def nextCmd(self, oids: 'Iterable[ObjectName|str]') -> list[list[tuple[ObjectName, SnmpValue]]]:
             varBinds = await self.prepare(oids)
             return await self.wrapCmd(
                 varBinds,
                 snmp3.nextCmd,
             )
 
-        async def bulkCmd(self, nonRepeaters:int, bulkWidth:int, oids:Iterable[ObjectName|str]) -> list[list[tuple[ObjectName, SnmpValue]]]:
+        async def bulkCmd(self, nonRepeaters:int, bulkWidth:int, oids:'Iterable[ObjectName|str]') -> list[list[tuple[ObjectName, SnmpValue]]]:
             varBinds = await self.prepare(oids)
             return await self.wrapCmd(
                 varBinds,
@@ -289,9 +293,9 @@ T=TypeVar('T')
 class IndexProbe(Generic[T]): # {{{
     def __init__(self, ret:T) -> None:
         self.ret = ret
-        self.indices:set[int|str] = set()
+        self.indices:'set[int|str]' = set()
 
-    def __getitem__(self, index:str|int) -> T:
+    def __getitem__(self, index:'str|int') -> T:
         if not isinstance(index, (str, int)):
             raise ConfigError(f"Path index is of wrong type {type(index)!r}")
         self.indices.add(index)
@@ -299,9 +303,9 @@ class IndexProbe(Generic[T]): # {{{
 # }}}
 
 class Auth: # {{{
-    kwargs:dict[str,str|None]
+    kwargs:'dict[str,str|None]'
     args:list[str]
-    path_indices:set[str|int]
+    path_indices:'set[str|int]'
 
     def __init__(self, cfg: YamlValue) -> None:
         with cfg.asStruct() as s:
@@ -332,7 +336,7 @@ class Auth: # {{{
         self.get_auth(probe)
         self.path_indices = probe.indices
 
-    def get_auth(self, path:list[str]|IndexProbe[str]) -> SnmpAuthType:
+    def get_auth(self, path:'list[str]|IndexProbe[str]') -> SnmpAuthType:
         args   = [ x.format(path=path) if isinstance(x, str) else x for x in self.args ]
         kwargs = { k:(x.format(path=path) if isinstance(x, str) else x) for k,x in self.kwargs.items() }
         if MYPY:
@@ -360,12 +364,12 @@ class Walker: # {{{
         self.walkBulkWidth = walkBulkWidth
     # }}}
 
-    def toOid(self, oid:str|ObjectName) -> ObjectName: # {{{
+    def toOid(self, oid:'str|ObjectName') -> ObjectName: # {{{
         if MYPY: assert False
         else: return ObjectName(oid)
     # }}}
 
-    async def get_next(self, oids:Iterable[ObjectName|str], bulkLength:int|None = None, strict:bool = False) -> dict[ObjectName, SnmpValue|None]: # {{{
+    async def get_next(self, oids:'Iterable[ObjectName|str]', bulkLength:'int|None' = None, strict:bool = False) -> 'dict[ObjectName, SnmpValue|None]': # {{{
         """ Gets scalar values (ending with .0), or just first subvalue if strict == False """
         if bulkLength is None:
             bulkLength = self.getBulkLength
@@ -399,7 +403,7 @@ class Walker: # {{{
         return scalars
     # }}}
 
-    async def walk(self, oids:Iterable[ObjectName|str|tuple[ObjectName|str,int|None]], bulkWidth:int|None = None, bulkLength:int|None = None) -> dict[ObjectName,dict[ObjectName,SnmpValue|None]]: # {{{
+    async def walk(self, oids:'Iterable[ObjectName|str|tuple[ObjectName|str,int|None]]', bulkWidth:'int|None' = None, bulkLength:'int|None' = None) -> 'dict[ObjectName,dict[ObjectName,SnmpValue|None]]': # {{{
         """ Walk oids, up to bulkLength at once, upto bulkWidth deep.
             individual oid may be string representation or ObjectName, or tuple (oid, max_items),
             where max_items is maximum scraped values for that oid

@@ -16,7 +16,7 @@ class MissingValue(YamlFileInfoValue): # {{{
     def __init__(self, fileInfo:str) -> None: self.fileInfo = fileInfo
 # }}}
 
-StrConstraintType = Literal['none']|Literal['identifier']
+StrConstraintType = Literal['none', 'identifier']
 class StrConstraint: # {{{
     rx:re.Pattern[str]
     error:str
@@ -46,7 +46,7 @@ class YamlValue(YamlFileInfoValue): # {{{
         self.fileInfo = fileInfo
     # }}}
 
-    def asStr(self, strict:bool=False, default:str|None = None, constraint:StrConstraintType = 'none') -> str: # {{{
+    def asStr(self, strict:bool=False, default:'str|None' = None, constraint:StrConstraintType = 'none') -> str: # {{{
         data = self.data
         if data is None or self.isMissing():
             if default is None:
@@ -65,7 +65,7 @@ class YamlValue(YamlFileInfoValue): # {{{
         return s
     # }}}
 
-    def asInt(self, strict:bool=False, default:int|None = None, min:int|None = None, max:int|None = None) -> int: # {{{
+    def asInt(self, strict:bool=False, default:'int|None' = None, min:'int|None' = None, max:'int|None' = None) -> int: # {{{
         data = self.data
         if data is None or self.isMissing():
             if default is None:
@@ -88,7 +88,7 @@ class YamlValue(YamlFileInfoValue): # {{{
         return i
     # }}}
 
-    def asFloat(self, strict:bool=False, default:float|None = None, min:float|None = None, max:float|None = None) -> float: # {{{
+    def asFloat(self, strict:bool=False, default:'float|None' = None, min:'float|None' = None, max:'float|None' = None) -> float: # {{{
         data = self.data
         if data is None or self.isMissing():
             if default is None:
@@ -110,7 +110,7 @@ class YamlValue(YamlFileInfoValue): # {{{
         return i
     # }}}
 
-    def asBool(self, strict:bool=False, default:bool|None = None) -> bool: # {{{
+    def asBool(self, strict:bool=False, default:'bool|None' = None) -> bool: # {{{
         data = self.data
         if data is None or data == '' or self.isMissing():
             if default is None:
@@ -227,7 +227,7 @@ class YamlStructWrapper: # {{{
         return self.struct
     # }}}
 
-    def __exit__(self, t:Type[BaseException]|None, v:BaseException|None, tr:object) -> None: # {{{
+    def __exit__(self, t:'Type[BaseException]|None', v:'BaseException|None', tr:object) -> None: # {{{
         if v is None:
             self.struct.checkUnknown()
     # }}}

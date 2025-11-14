@@ -7,19 +7,21 @@ from .output   import Renderer, ScrapedTables, ScrapedDevice
 from .metrics  import Devices, Device
 from .schedule import ScrapeJob, ScrapeSchedule
 
-from typing import TypeVar, Callable, Iterator, cast, Self, Generic, Awaitable
+from typing import TypeVar, Callable, Iterator, cast, Generic, Awaitable, TYPE_CHECKING
 import asyncio
 import queue
 import time
 import traceback
 import yaml
+if TYPE_CHECKING:
+    from typing import Self
 
 import logging
 tasklogger = logging.getLogger('task')
 
 # {{{ NonParallelTaskExecutor
 class TaskDefinition:
-    def update(self, older:Self) -> None:
+    def update(self, older:'Self') -> None:
         raise NotImplementedError()
 
     async def run(self) -> bool:
@@ -146,7 +148,7 @@ class SingleTargetScraper(TaskDefinition):
         self.inputs = inputs
         self.outputs = outputs
 
-    def update(self, older:Self) -> None:
+    def update(self, older:'Self') -> None:
         #Just forget old configuration
         pass
 
@@ -181,7 +183,7 @@ class SingleTargetScraper(TaskDefinition):
         return True
 # }}}
 
-OUTPUT_TYPES:dict[str, type[Renderer]|tuple[str,str]] = {
+OUTPUT_TYPES:'dict[str, type[Renderer]|tuple[str,str]]' = {
     "influx":(".influxdb","InfluxDB"),
     "promtext":(".promtext","PrometheusText"),
     "prombuf":(".prombuf", "PrometheusV1ProtoBuf"),
@@ -237,7 +239,7 @@ class Context:
             ret[name] = getRenderer(cfgv)
         self.outputs = ret
 
-    def load(self, name:str, configuration:str|YamlValue|None) -> tuple[bool, str]:
+    def load(self, name:str, configuration:'str|YamlValue|None') -> tuple[bool, str]:
         phase = "parse " + {
             "auths": "credentials",
             "inputs": "inputs",
@@ -269,7 +271,7 @@ class StopMessage: pass
 
 outputlogger = logging.getLogger('output')
 class OutputRunner:
-    queue:asyncio.Queue[ScrapedTables|StopMessage]
+    queue:'asyncio.Queue[ScrapedTables|StopMessage]'
 
     def __init__(self, name: str, output:Renderer, parent:'Executor') -> None:
         outputlogger.debug(f"{self} new ({name}, {output}, {parent})")
@@ -324,11 +326,11 @@ class Executor:
         self.output_runners:set[OutputRunner] = set()
 
     def reload(self,
-        auth_path:str|YamlValue|None = None,
-        input_path:str|YamlValue|None = None,
-        table_path:str|YamlValue|None = None,
-        schedule_path:str|YamlValue|None = None,
-        output_path:str|YamlValue|None = None,
+        auth_path:'str|YamlValue|None' = None,
+        input_path:'str|YamlValue|None' = None,
+        table_path:'str|YamlValue|None' = None,
+        schedule_path:'str|YamlValue|None' = None,
+        output_path:'str|YamlValue|None' = None,
     ) -> tuple[bool,str]:
         executorlogger.debug(f"{self}: reload")
         # FIXME: disable reload when stopping

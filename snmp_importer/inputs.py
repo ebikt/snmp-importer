@@ -1,6 +1,7 @@
 from .config import YamlValue
 from .walker import ObjectName, SnmpValue, OctetString, TimeTicks
 import pyasn1.type.univ as univ
+from typing import Union
 
 import re, ipaddress
 from typing import cast, Iterator, Callable
@@ -89,20 +90,20 @@ class Inputs: # {{{
         return self.inputs[group][column].oid
 # }}}
 
-ValueExpressionRet = bool|int|float|bytes|str
+ValueExpressionRet = Union[bool,int,float,bytes,str]
 
 class InputTransformation:
     evaluate: Callable[['InputProxyL2'], dict[str,ValueExpressionRet]]
 
 class InputTreeNode: # {{{
-    max_items: int|None
+    max_items: 'int|None'
     childs: dict[int,'InputTreeNode']
 
     def __init__(self) -> None:
         self.max_items = 0
         self.childs = {}
 
-    def add(self, oid:ObjectName|tuple[int, ...], max_items:int|None) -> None:
+    def add(self, oid:'ObjectName|tuple[int, ...]', max_items:'int|None') -> None:
         if len(oid) == 0:
             if self.max_items is None:
                 return
@@ -115,7 +116,7 @@ class InputTreeNode: # {{{
                 self.childs[oid[0]] = InputTreeNode()
             self.childs[oid[0]].add(oid[1:], max_items)
 
-    def __iter__(self) -> Iterator[tuple[tuple[int,...], int|None]]:
+    def __iter__(self) -> 'Iterator[tuple[tuple[int,...], int|None]]':
         if self.max_items != 0:
             yield (), self.max_items
         if self.max_items is None:
@@ -141,11 +142,11 @@ class InputProxyL1:  # {{{
         self.inputs = inputs
         self.suffix = suffix
 
-    def get(self, key:str, default:ValueExpressionRet|None = None) -> ValueExpressionRet|None:
+    def get(self, key:str, default:'ValueExpressionRet|None' = None) -> 'ValueExpressionRet|None':
         ret = self[key]
         return default if ret is None else ret
 
-    def __getattr__(self, key:str) -> ValueExpressionRet|None:
+    def __getattr__(self, key:str) -> 'ValueExpressionRet|None':
         try:
             idef = self.inputs[key]
         except KeyError:
@@ -154,14 +155,14 @@ class InputProxyL1:  # {{{
             return self.parent.evaluate(idef, self.suffix)
         raise AttributeError(key)
 
-    def __getitem__(self, key:str) -> ValueExpressionRet|None:
+    def __getitem__(self, key:str) -> 'ValueExpressionRet|None':
         idef = self.inputs[key]
         return self.parent.evaluate(idef, self.suffix)
 # }}}
 
 class InputProxyL2: # {{{
     proxies: dict[str, InputProxyL1]
-    def __init__(self, parent:'InputValueGroups', inputs: dict[str,dict[str, InputDefinition]], suffix:ObjectName, xform:InputTransformation|None) -> None:
+    def __init__(self, parent:'InputValueGroups', inputs: dict[str,dict[str, InputDefinition]], suffix:ObjectName, xform:'InputTransformation|None') -> None:
         self.parent = parent
         self.inputs = inputs
         self.suffix = suffix
@@ -193,7 +194,7 @@ class WalkerInfo(InputDefinition): # {{{
 # }}}
 
 class InputValueGroups: # {{{
-    def __init__(self, data:dict[ObjectName,dict[ObjectName,SnmpValue|None]], inputs:Inputs, root:InputTreeNode, transformations:dict[str, InputTransformation]) -> None:
+    def __init__(self, data:'dict[ObjectName,dict[ObjectName,SnmpValue|None]]', inputs:Inputs, root:InputTreeNode, transformations:dict[str, InputTransformation]) -> None:
         self.inputs = inputs
         self.data   = data
         self.root   = root
@@ -203,7 +204,7 @@ class InputValueGroups: # {{{
         iid, tname = iid_tname
         return InputProxyL2(self, self.inputs.inputs, iid, self.transformations.get(tname, None))
 
-    def evaluate(self, idef:InputDefinition, iid:ObjectName) -> ValueExpressionRet|None:
+    def evaluate(self, idef:InputDefinition, iid:ObjectName) -> 'ValueExpressionRet|None':
         if isinstance(idef, WalkerInfo):
             assert idef.what == 'iid'
             return str(iid)

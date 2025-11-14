@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import asyncio, argparse, os, sys, json
-from typing import cast, Annotated, Literal
+from typing import cast, Annotated, Literal, Optional
 import logging.config
 
 from snmp_importer.config      import YamlValue
@@ -78,7 +78,7 @@ class Args:
                 help='Schedule configuration.')]
     outputs:     Annotated[str,      '-o', dict(default='@/outputs.yml',
                 help='Output configuration.')]
-    test:        Annotated[str|None, '-T', dict(default=None, metavar='TABLE/ADDRESS/AUTH[,retries=CNT][,timeout=SECONDS]',
+    test:        Annotated[Optional[str], '-T', dict(default=None, metavar='TABLE/ADDRESS/AUTH[,retries=CNT][,timeout=SECONDS]',
                 help='run single scrape of table set TABLE on address ADDRESS using auth AUTH')]
     test_influx: Annotated[bool,     '-I', dict(default=False, action='store_true',
                 help='Use colored stdout influx writer as output.')]
@@ -100,9 +100,9 @@ class Args:
             long  = '--' + k.replace('_','-')
             self.parser.add_argument(long, short, **m) # type: ignore
 
-    def parse(self) -> tuple[dict[str, YamlValue|str], Literal["run","test","cfg"], int]:
+    def parse(self) -> 'tuple[dict[str, YamlValue|str], Literal["run","test","cfg"], int]':
         args = self.parser.parse_args()
-        loglevel_str = cast(str|None, args.loglevel)
+        loglevel_str = cast('str|None', args.loglevel)
         if loglevel_str is None:
             if cast(object, args.test) is None:
                 loglevel = 20 # INFO
