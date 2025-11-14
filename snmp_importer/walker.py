@@ -5,6 +5,12 @@ MYPY = False
 
 from typing import Union
 
+try:
+    a_timeout = asyncio.timeout
+except AttributeError:
+    import async_timeout
+    a_timeout = async_timeout.timeout
+
 if MYPY:
     from typing import overload, Self, Iterator, Literal
     # white lies
@@ -236,7 +242,7 @@ class Target: # {{{
             kwargs = {'lookupMib':False,'lexicographicMode':False} | kwargs
             while retries > 0:
                 try:
-                    async with asyncio.timeout(None if self.timeout <= 0 else self.timeout):
+                    async with a_timeout(None if self.timeout <= 0 else self.timeout):
                         snmplogger.log(1,f"{self} await {command}")
                         errorIndication, errorStatus, errorIndex, result = await command(*common_args, *args, *varBinds, **kwargs)
                         snmplogger.log(1,f"{self} await {command} done")

@@ -3,7 +3,7 @@ from .inputs  import InputProxyL2, ValueExpressionRet, InputValueGroups, InputTr
 from .metrics import Table, Device, MetricMetaData, ValueExpression
 from typing import Iterator, Callable, IO, cast
 from types  import TracebackType
-import aiohttp, zlib, time, sys, re, logging
+import aiohttp, zlib, time, sys, re, logging, traceback
 
 def prom_id(s:str) -> str: #  {{{
     assert re.match(r'^[-_a-zA-Z][-_a-zA-Z0-9]*$', s)
@@ -145,12 +145,12 @@ class ScrapedDevice: # {{{
         self.scrape_limit = tuple( (ObjectName(oid), limit) for oid, limit in self.root) 
 
     async def scrape(self) -> ScrapedTables:
-        errors = ErrorCollector(f"f{self.device.name}({self.walker.target.host})")
+        errors = ErrorCollector(f"{self.device.name}({self.walker.target.host})")
         scrape_start = time.time()
         try:
             retv = await self.walker.walk(self.scrape_limit)
         except Exception as e:
-            errors.add(f"Scraping device failed: {type(e).__name__}: {e!r}")
+            errors.add(f"Scraping device failed: {traceback.format_exc(0)}{traceback.format_exc(2)}")
             return ScrapedTables({},errors, self, {"scrape":time.time() - scrape_start, "rows": 0})
         scrape_end = time.time()
         scrape_time = scrape_end - scrape_start
