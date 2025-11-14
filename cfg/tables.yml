@@ -931,3 +931,9 @@ extreme_5520:
     - sysinfo_short
     - ifaces64
     - sensors_entity
+
+asyncos:
+  include:
+    - ifaces64
+    - asyncos_util
+    - asyncos_hw
