@@ -190,12 +190,15 @@ class Main:
     def __init__(self) -> None:
         args, mode, limit = Args().parse()
         self.logger = logging.getLogger('Main')
+        asyncio.run(self.init_cont(args, mode, limit))
+
+    async def init_cont(self, args:'dict[str, YamlValue|str]', mode:Literal['run','test','cfg'], limit:float) -> None:
         self.executor = Executor()
         ok, msg = self.executor.reload(**args)
         if not ok:
             print(f"Bad configuration: {msg}", file=sys.stderr)
             sys.exit(1)
-        asyncio.run(getattr(self, mode)(limit)) # type: ignore
+        await getattr(self, mode)(limit) # type: ignore
 
     async def run(self, limit:float) -> None:
         if not limit:

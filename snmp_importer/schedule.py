@@ -98,7 +98,7 @@ class SchedTable(Generic[T]):
             if now < next_t:
                 try:
                     await asyncio.wait_for(self.stop_event.wait(), next_t - now)
-                except TimeoutError:
+                except (TimeoutError,asyncio.TimeoutError):
                     pass
                 else:
                     break
